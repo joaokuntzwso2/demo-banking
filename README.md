@@ -431,7 +431,7 @@ curl -i -X POST "$BACKEND/payments/pix" \
   -d '{
     "accountId": "ACC-CHK-BR-001",
     "beneficiaryName": "Joao Silva",
-    "beneficiaryBank": "NU_PAGAMENTOS",
+    "beneficiaryBank": "BANCO_ABCD",
     "amountBr": 125.50
   }'
 ```
@@ -458,7 +458,7 @@ curl -i -X POST "$BACKEND/payments/pix" \
   -d '{
     "accountId": "ACC-CHK-BR-001",
     "beneficiaryName": "Joao Silva",
-    "beneficiaryBank": "NU_PAGAMENTOS",
+    "beneficiaryBank": "BANCO_ABCD",
     "amountBr": -10
   }'
 ```
@@ -622,7 +622,7 @@ curl -i -X POST "$MI/payments/1.0.0/pix/sync" \
   -d '{
     "accountId": "ACC-CHK-BR-001",
     "beneficiaryName": "Joao Silva",
-    "beneficiaryBank": "NU_PAGAMENTOS",
+    "beneficiaryBank": "BANCO_ABCD",
     "amountBr": 88.90
   }'
 ```
@@ -636,7 +636,7 @@ curl -i -X POST "$MI/payments/1.0.0/pix/sync" \
   -d '{
     "accountId": "ACC-CHK-BR-001",
     "beneficiaryName": "Joao Silva",
-    "beneficiaryBank": "NU_PAGAMENTOS",
+    "beneficiaryBank": "BANCO_ABCD",
     "amountBr": -1
   }'
 ```
@@ -849,7 +849,7 @@ curl -i -X POST "$AGENT/v1/payments/chat" \
   -H "X-Correlation-Id: payments-001" \
   -d '{
     "sessionId": "sess-payments-001",
-    "message": "Submit a PIX payment from account ACC-CHK-BR-001 to Joao Silva at NU_PAGAMENTOS for BRL 125.50."
+    "message": "Submit a PIX payment from account ACC-CHK-BR-001 to Joao Silva at BANCO_ABCD for BRL 125.50."
   }'
 ```
 
@@ -1249,7 +1249,7 @@ curl -i -X POST "$MI/payments/1.0.0/pix/sync" \
   -d '{
     "accountId": "ACC-CHK-BR-001",
     "beneficiaryName": "Smoke User",
-    "beneficiaryBank": "NU_PAGAMENTOS",
+    "beneficiaryBank": "BANCO_ABCD",
     "amountBr": 20.00
   }'
 echo

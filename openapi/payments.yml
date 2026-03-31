@@ -130,7 +130,7 @@ components:
           example: Joao Silva
         beneficiaryBank:
           type: string
-          example: NU_PAGAMENTOS
+          example: BANCO_ABCD
         amountBr:
           type: number
           format: double
