@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<messageProcessor class="org.apache.synapse.message.processor.impl.forwarder.ScheduledMessageForwardingProcessor"
+                  name="TedTransferProcessor"
+                  messageStore="TedTransferStore"
+                  targetEndpoint="TedTransferEP"
+                  xmlns="http://ws.apache.org/ns/synapse">
+    <parameter name="client.retry.interval">1000</parameter>
+    <parameter name="message.processor.reply.sequence">ProcessorAsyncReplySeq</parameter>
+    <parameter name="non.retry.status.codes">200,201,202</parameter>
+    <parameter name="message.processor.deactivate.sequence">ProcessorAsyncDeactivateSeq</parameter>
+    <parameter name="is.active">true</parameter>
+    <parameter name="max.delivery.attempts">2</parameter>
+    <parameter name="store.connection.retry.interval">1000</parameter>
+    <parameter name="max.store.connection.attempts">-1</parameter>
+    <parameter name="max.delivery.drop">Enabled</parameter>
+    <parameter name="interval">7000</parameter>
+    <parameter name="concurrency">1</parameter>
+</messageProcessor>

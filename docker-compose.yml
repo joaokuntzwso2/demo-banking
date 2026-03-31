@@ -1,0 +1,51 @@
+services:
+  banking-backend:
+    build: ./banking-backend-js
+    container_name: banking-backend
+    ports:
+      - "8080:8080"
+
+  wso2mi:
+    build:
+      context: ./banking-mi
+      dockerfile: deployment/docker/Dockerfile
+    container_name: banking-mi
+    image: banking-mi:1.0.0
+    ports:
+      - "8290:8290"
+    environment:
+      JAVA_OPTS: >
+        -Xms256m
+        -Xmx768m
+        -XX:MaxMetaspaceSize=256m
+        -XX:+UseG1GC
+        -DenableHotDeployment=false
+    depends_on:
+      - banking-backend
+    volumes:
+      - ./banking-mi/src/main/wso2mi/artifacts/apis:/home/wso2carbon/wso2mi-4.5.0/repository/deployment/server/synapse-configs/default/api
+      - ./banking-mi/src/main/wso2mi/artifacts/endpoints:/home/wso2carbon/wso2mi-4.5.0/repository/deployment/server/synapse-configs/default/endpoints
+      - ./banking-mi/src/main/wso2mi/artifacts/sequences:/home/wso2carbon/wso2mi-4.5.0/repository/deployment/server/synapse-configs/default/sequences
+      - ./banking-mi/src/main/wso2mi/artifacts/message-stores:/home/wso2carbon/wso2mi-4.5.0/repository/deployment/server/synapse-configs/default/message-stores
+      - ./banking-mi/src/main/wso2mi/artifacts/message-processors:/home/wso2carbon/wso2mi-4.5.0/repository/deployment/server/synapse-configs/default/message-processors
+      - ./banking-mi/src/main/wso2mi/artifacts/inbound-endpoints:/home/wso2carbon/wso2mi-4.5.0/repository/deployment/server/synapse-configs/default/inbound-endpoints
+      - ./banking-mi/src/main/wso2mi/artifacts/local-entries:/home/wso2carbon/wso2mi-4.5.0/repository/deployment/server/synapse-configs/default/local-entries
+      - ./banking-mi/deployment/deployment.toml:/home/wso2carbon/wso2mi-4.5.0/conf/deployment.toml:ro
+
+  banking-agent:
+    build: ./banking_agent
+    container_name: banking-agent
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - BACKEND_BASE_URL=http://banking-mi:8290
+      - HTTP_LISTENER_PORT=8293
+    ports:
+      - "8293:8293"
+    depends_on:
+      - wso2mi
+
+  banking-webhook-listener:
+    build: ./banking-webhook-listener
+    container_name: banking-webhook-listener
+    ports:
+      - "8099:8099"

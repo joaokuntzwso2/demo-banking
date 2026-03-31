@@ -1,0 +1,193 @@
+openapi: 3.0.3
+info:
+  title: Banking Backend - Transfers API
+  version: 1.0.0
+  description: TED transfer endpoints for the banking demo backend.
+servers:
+  - url: http://localhost:8080
+
+paths:
+  /transfers/ted:
+    post:
+      operationId: createTedTransfer
+      summary: Submit a TED transfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TedTransferRequest"
+      responses:
+        "201":
+          description: TED transfer created
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/XCorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TedTransfer"
+        "400":
+          description: Validation or business error
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/XCorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /transfers:
+    get:
+      operationId: listTransfers
+      summary: List recent transfers
+      responses:
+        "200":
+          description: Recent transfers
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/XCorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TedTransfer"
+
+  /transfers/{transferId}:
+    get:
+      operationId: getTransferStatus
+      summary: Get transfer by transferId
+      parameters:
+        - name: transferId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: TRF-20260315-0001
+      responses:
+        "200":
+          description: Transfer found
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/XCorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TedTransfer"
+        "404":
+          description: Transfer not found
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/XCorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+components:
+  headers:
+    XCorrelationId:
+      description: Correlation ID for tracing across services.
+      schema:
+        type: string
+
+  schemas:
+    MessageResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          example: Transfer not found
+      required: [message]
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+        correlationId:
+          type: string
+        error:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+      required: [message, correlationId, error]
+
+    TedTransferRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        fromAccountId:
+          type: string
+          example: ACC-CHK-BR-001
+        toBankCode:
+          type: string
+          example: "237"
+        toAccountMasked:
+          type: string
+          example: "****4321"
+        amountBr:
+          type: number
+          format: double
+          example: 250.00
+        channel:
+          type: string
+          example: INTERNET_BANKING
+      required:
+        - fromAccountId
+        - toBankCode
+        - toAccountMasked
+        - amountBr
+        - channel
+
+    TedTransfer:
+      type: object
+      additionalProperties: false
+      properties:
+        transferId:
+          type: string
+        fromAccountId:
+          type: string
+        customerId:
+          type: string
+        method:
+          type: string
+          enum: [TED]
+        toBankCode:
+          type: string
+        toAccountMasked:
+          type: string
+        amountBr:
+          type: number
+          format: double
+        currency:
+          type: string
+          example: BRL
+        channel:
+          type: string
+        status:
+          type: string
+          enum: [COMPLETED, PENDING_REVIEW, FAILED]
+        createdAt:
+          type: string
+          format: date-time
+        lastUpdatedAt:
+          type: string
+          format: date-time
+      required:
+        - transferId
+        - fromAccountId
+        - customerId
+        - method
+        - toBankCode
+        - toAccountMasked
+        - amountBr
+        - currency
+        - channel
+        - status
+        - createdAt
+        - lastUpdatedAt

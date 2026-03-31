@@ -1,0 +1,10 @@
+---
+key: "BankingUnifiedAPI-1.0.0"
+name : "BankingUnifiedAPI"
+displayName : "BankingUnifiedAPI"
+description: "BankingUnifiedAPI"
+version: "1.0.0"
+serviceUrl: "https://{MI_HOST}:{MI_PORT}/bankingunifiedapi"
+definitionType: "OAS3"
+securityType: "BASIC"
+mutualSSLEnabled: false

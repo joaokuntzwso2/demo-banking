@@ -1,0 +1,20 @@
+[server]
+hostname = "localhost"
+
+[internal_apis.file_user_store]
+enable = true
+
+[[internal_apis.users]]
+user.name = "admin"
+user.password = "admin"
+
+[management_api]
+protocols = "http"
+
+[transport.http]
+socket_timeout = 180000
+disable_connection_keepalive = false
+connection_timeout = 90000
+
+[mediation]
+synapse.global_timeout_interval = "120000"

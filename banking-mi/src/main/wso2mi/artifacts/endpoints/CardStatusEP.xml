@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<endpoint name="CardStatusEP" xmlns="http://ws.apache.org/ns/synapse">
+    <http method="get" trace="enable" uri-template="http://banking-backend:8080/cards/{uri.var.cardId}/status">
+        <timeout>
+            <duration>30000</duration>
+        </timeout>
+        <suspendOnFailure>
+            <errorCodes>101504,101505,101500,101501,101503</errorCodes>
+            <initialDuration>30000</initialDuration>
+            <progressionFactor>1.5</progressionFactor>
+            <maximumDuration>120000</maximumDuration>
+        </suspendOnFailure>
+        <markForSuspension>
+            <errorCodes>101504,101505,101500,101501,101503</errorCodes>
+            <retriesBeforeSuspension>0</retriesBeforeSuspension>
+        </markForSuspension>
+    </http>
+</endpoint>

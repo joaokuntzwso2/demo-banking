@@ -1,0 +1,187 @@
+openapi: 3.0.3
+info:
+  title: Banking Backend - Payments API
+  version: 1.0.0
+  description: PIX payment endpoints for the banking demo backend.
+servers:
+  - url: http://localhost:8080
+
+paths:
+  /payments/pix:
+    post:
+      operationId: createPixPayment
+      summary: Submit a PIX payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PixPaymentRequest"
+      responses:
+        "201":
+          description: PIX payment created
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/XCorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PixPayment"
+        "400":
+          description: Validation or business error
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/XCorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /payments:
+    get:
+      operationId: listPayments
+      summary: List recent payments
+      responses:
+        "200":
+          description: Recent payments
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/XCorrelationId"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PixPayment"
+
+  /payments/{paymentId}:
+    get:
+      operationId: getPaymentStatus
+      summary: Get payment by paymentId
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: PMT-PIX-20260315-0001
+      responses:
+        "200":
+          description: Payment found
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/XCorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PixPayment"
+        "404":
+          description: Payment not found
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/XCorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+components:
+  headers:
+    XCorrelationId:
+      description: Correlation ID for tracing across services.
+      schema:
+        type: string
+
+  schemas:
+    MessageResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          example: Payment not found
+      required: [message]
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          example: An error occurred while processing the request
+        correlationId:
+          type: string
+        error:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+      required: [message, correlationId, error]
+
+    PixPaymentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        accountId:
+          type: string
+          example: ACC-CHK-BR-001
+        beneficiaryName:
+          type: string
+          example: Joao Silva
+        beneficiaryBank:
+          type: string
+          example: NU_PAGAMENTOS
+        amountBr:
+          type: number
+          format: double
+          example: 125.50
+      required:
+        - accountId
+        - beneficiaryName
+        - beneficiaryBank
+        - amountBr
+
+    PixPayment:
+      type: object
+      additionalProperties: false
+      properties:
+        paymentId:
+          type: string
+        accountId:
+          type: string
+        customerId:
+          type: string
+        method:
+          type: string
+          enum: [PIX]
+        beneficiaryName:
+          type: string
+        beneficiaryBank:
+          type: string
+        amountBr:
+          type: number
+          format: double
+        currency:
+          type: string
+          example: BRL
+        status:
+          type: string
+          enum: [COMPLETED, PENDING_REVIEW, FAILED]
+        createdAt:
+          type: string
+          format: date-time
+        lastUpdatedAt:
+          type: string
+          format: date-time
+      required:
+        - paymentId
+        - accountId
+        - customerId
+        - method
+        - beneficiaryName
+        - beneficiaryBank
+        - amountBr
+        - currency
+        - status
+        - createdAt
+        - lastUpdatedAt

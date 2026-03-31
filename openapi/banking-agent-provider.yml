@@ -1,0 +1,533 @@
+openapi: 3.0.3
+info:
+  title: BankingOmniAgentAPI
+  description: >
+    Omni agent orchestration endpoint for Banking, used as a Custom AI
+    Provider in WSO2 API Manager.
+
+    This API exposes chat endpoints for the Omni agent and specialized domain
+    agents (retail, payments, risk, compliance). These endpoints return
+    a final safe answer, along with LLM usage metadata for analytics and
+    throttling.
+
+    The banking agent layer is designed to interact only with the integration
+    layer (WSO2 MI / APIM facade), never directly with core backend systems.
+    Responses are constrained to avoid financial, legal, tax, and fraud-evasion
+    advice, while preserving high-quality operational guidance.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8293/
+    description: Replace with the actual base URL of the Banking Agent service
+
+security:
+  - default: []
+
+paths:
+  /v1/omni/chat:
+    post:
+      summary: Chat with Banking Omni Agent
+      description: >
+        Receives a user message and a sticky sessionId,
+        orchestrates one or more specialized banking domain agents
+        (retail, payments, risk, compliance), applies a safety overlay,
+        and returns a final safe response together with LLM usage metadata.
+
+        The Omni agent is intended for multi-domain banking questions such as:
+        customer + account + card + payment + transfer + compliance context.
+      operationId: omniChat
+      requestBody:
+        required: true
+        description: Request payload for the Omni Agent.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRequest'
+            example:
+              sessionId: "sess-omni-1"
+              message: "Please summarize customer CUST-BR-001, account ACC-CHK-BR-001, card CARD-CR-BR-001, payment PMT-PIX-20260315-0001, transfer TRF-20260315-0001, and any risk or compliance concerns."
+      responses:
+        '200':
+          description: Successful response from Omni Agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+              example:
+                sessionId: "sess-omni-1"
+                agentName: "BankingOmniAgent"
+                promptVersion: "banking-omni-v1.0.0"
+                message: "Here is a consolidated operational summary for customer CUST-BR-001. The current data shows the requested customer, account, card, payment, and transfer context, along with any visible review or compliance-relevant status. Notice: this response is for informational purposes only and does not replace financial, legal, tax, or regulatory advice."
+                llm:
+                  responseModel: "gpt-4o"
+                  promptTokenCount: 42
+                  completionTokenCount: 158
+                  totalTokenCount: 200
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal error during agent execution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security:
+        - default: []
+      x-auth-type: Application & Application User
+      x-throttling-tier: Unlimited
+      x-wso2-application-security:
+        security-types:
+          - api_key
+        optional: false
+
+  /v1/retail/chat:
+    post:
+      summary: Chat with Banking Retail Agent
+      description: >
+        Receives a user message and a sticky sessionId,
+        uses retail banking workflows and tools to explain customer profile,
+        account balance, and card status in plain operational language.
+
+        This agent focuses on customer/account/card context and does not
+        provide financial, legal, or tax advice.
+      operationId: retailChat
+      requestBody:
+        required: true
+        description: Request payload for the Retail Agent.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRequest'
+            example:
+              sessionId: "sess-retail-1"
+              message: "Please summarize customer CUST-BR-001, account ACC-CHK-BR-001, and card CARD-CR-BR-001 in plain language."
+      responses:
+        '200':
+          description: Successful response from Retail Agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+              example:
+                sessionId: "sess-retail-1"
+                agentName: "BankingRetailAgent"
+                promptVersion: "banking-retail-v1.0.0"
+                message: "Customer CUST-BR-001 is available in the current system data. Account ACC-CHK-BR-001 and card CARD-CR-BR-001 were also identified, and I can summarize their operational status based on the returned records."
+                llm:
+                  responseModel: "gpt-4o"
+                  promptTokenCount: 24
+                  completionTokenCount: 104
+                  totalTokenCount: 128
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal error during agent execution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security:
+        - default: []
+      x-auth-type: Application & Application User
+      x-throttling-tier: Unlimited
+      x-wso2-application-security:
+        security-types:
+          - api_key
+        optional: false
+
+  /v1/payments/chat:
+    post:
+      summary: Chat with Banking Payments Agent
+      description: >
+        Receives a user message and a sticky sessionId,
+        uses payment workflows and tools to create or inspect PIX payments
+        and inspect TED transfer status, returning a safe operational response
+        along with LLM usage metadata.
+
+        This agent explains transaction status conservatively and does not
+        provide financial, legal, tax, or fraud-evasion advice.
+      operationId: paymentsChat
+      requestBody:
+        required: true
+        description: Request payload for the Payments Agent.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRequest'
+            example:
+              sessionId: "sess-payments-1"
+              message: "Please check the status of payment PMT-PIX-20260315-0001 and transfer TRF-20260315-0001."
+      responses:
+        '200':
+          description: Successful response from Payments Agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+              example:
+                sessionId: "sess-payments-1"
+                agentName: "BankingPaymentsAgent"
+                promptVersion: "banking-payments-v1.0.0"
+                message: "I checked the requested payment and transfer identifiers and can explain their current operational status based on system data. I cannot guarantee settlement timing beyond the explicit returned status."
+                llm:
+                  responseModel: "gpt-4o"
+                  promptTokenCount: 22
+                  completionTokenCount: 112
+                  totalTokenCount: 134
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal error during agent execution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security:
+        - default: []
+      x-auth-type: Application & Application User
+      x-throttling-tier: Unlimited
+      x-wso2-application-security:
+        security-types:
+          - api_key
+        optional: false
+
+  /v1/risk/chat:
+    post:
+      summary: Chat with Banking Risk Agent
+      description: >
+        Receives a user message and a sticky sessionId,
+        uses risk-oriented workflows and tools to inspect card status,
+        payment review status, and transfer review status, and returns
+        a conservative operational explanation along with LLM usage metadata.
+
+        This agent does not provide fraud-evasion, legal, or financial advice.
+      operationId: riskChat
+      requestBody:
+        required: true
+        description: Request payload for the Risk Agent.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRequest'
+            example:
+              sessionId: "sess-risk-1"
+              message: "Please explain whether card CARD-CR-BR-001, payment PMT-PIX-20260315-0001, or transfer TRF-20260315-0001 show any review or risk-relevant status."
+      responses:
+        '200':
+          description: Successful response from Risk Agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+              example:
+                sessionId: "sess-risk-1"
+                agentName: "BankingRiskAgent"
+                promptVersion: "banking-risk-v1.0.0"
+                message: "I reviewed the requested card, payment, and transfer identifiers and can summarize any explicit blocked, under-review, or similar operational states present in the current system data."
+                llm:
+                  responseModel: "gpt-4o"
+                  promptTokenCount: 29
+                  completionTokenCount: 118
+                  totalTokenCount: 147
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal error during agent execution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security:
+        - default: []
+      x-auth-type: Application & Application User
+      x-throttling-tier: Unlimited
+      x-wso2-application-security:
+        security-types:
+          - api_key
+        optional: false
+
+  /v1/compliance/chat:
+    post:
+      summary: Chat with Banking Compliance Agent
+      description: >
+        Receives a user message and a sticky sessionId,
+        uses compliance workflows and tools to inspect customer compliance
+        context and optionally create compliance audit events, and returns
+        a safe response along with LLM usage metadata.
+
+        This agent does not provide legal or regulatory advice.
+      operationId: complianceChat
+      requestBody:
+        required: true
+        description: Request payload for the Compliance Agent.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRequest'
+            example:
+              sessionId: "sess-compliance-1"
+              message: "Please summarize customer CUST-BR-001 for compliance context and explain whether an AML_REVIEW audit event would record a compliance action."
+      responses:
+        '200':
+          description: Successful response from Compliance Agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+              example:
+                sessionId: "sess-compliance-1"
+                agentName: "BankingComplianceAgent"
+                promptVersion: "banking-compliance-v1.0.0"
+                message: "I can summarize the customer context available to compliance workflows and explain what a compliance audit event appears to record. I cannot provide legal or regulatory advice."
+                llm:
+                  responseModel: "gpt-4o"
+                  promptTokenCount: 27
+                  completionTokenCount: 116
+                  totalTokenCount: 143
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal error during agent execution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+      security:
+        - default: []
+      x-auth-type: Application & Application User
+      x-throttling-tier: Unlimited
+      x-wso2-application-security:
+        security-types:
+          - api_key
+        optional: false
+
+  /v1/health:
+    get:
+      summary: Health check for Banking Agent service
+      description: Basic liveness endpoint for the Banking Agent service.
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "UP"
+                component: "Banking-BI-Agents"
+      security:
+        - default: []
+      x-auth-type: None
+      x-throttling-tier: Unlimited
+
+  /v1/health/ready:
+    get:
+      summary: Readiness check for Banking Agent service
+      description: Readiness endpoint for the Banking Agent service and its dependencies.
+      operationId: readinessCheck
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+              example:
+                status: "UP"
+                component: "Banking-BI-Agents"
+                dependencies:
+                  - "OpenAI"
+                  - "MI/APIM-Backend"
+      security:
+        - default: []
+      x-auth-type: None
+      x-throttling-tier: Unlimited
+
+components:
+  schemas:
+    AgentRequest:
+      type: object
+      required:
+        - message
+        - sessionId
+      properties:
+        sessionId:
+          type: string
+          description: Sticky session identifier used to maintain LLM context.
+          example: "sess-omni-1"
+        message:
+          type: string
+          description: User message.
+          example: "Please summarize customer CUST-BR-001 and payment PMT-PIX-20260315-0001."
+
+    LlmUsage:
+      type: object
+      description: >
+        LLM usage metadata used by WSO2 API Manager AI Gateway for analytics
+        and throttling. Values are estimated by the backend service.
+      required:
+        - completionTokenCount
+        - promptTokenCount
+        - responseModel
+        - totalTokenCount
+      properties:
+        responseModel:
+          type: string
+          example: "gpt-4o"
+        promptTokenCount:
+          type: integer
+          format: int32
+          example: 27
+        completionTokenCount:
+          type: integer
+          format: int32
+          example: 120
+        totalTokenCount:
+          type: integer
+          format: int32
+          example: 147
+        remainingTokenCount:
+          type: integer
+          format: int32
+          nullable: true
+          example: 980000
+
+    AgentResponse:
+      type: object
+      required:
+        - agentName
+        - message
+        - promptVersion
+        - sessionId
+      properties:
+        sessionId:
+          type: string
+          example: "sess-omni-1"
+        agentName:
+          type: string
+          example: "BankingOmniAgent"
+        promptVersion:
+          type: string
+          example: "banking-omni-v1.0.0"
+        message:
+          type: string
+        llm:
+          $ref: '#/components/schemas/LlmUsage'
+
+    ErrorBody:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: "Agent execution failed"
+        details:
+          type: string
+          nullable: true
+          example: "Message must not be empty."
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - component
+      properties:
+        status:
+          type: string
+          example: "UP"
+        component:
+          type: string
+          example: "Banking-BI-Agents"
+
+    ReadyResponse:
+      type: object
+      required:
+        - status
+        - component
+        - dependencies
+      properties:
+        status:
+          type: string
+          example: "UP"
+        component:
+          type: string
+          example: "Banking-BI-Agents"
+        dependencies:
+          type: array
+          items:
+            type: string
+          example:
+            - "OpenAI"
+            - "MI/APIM-Backend"
+
+  securitySchemes:
+    default:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://test.com
+          scopes: {}
+
+x-wso2-auth-header: Authorization
+x-wso2-api-key-header: ApiKey
+x-wso2-cors:
+  corsConfigurationEnabled: false
+  accessControlAllowOrigins:
+    - '*'
+  accessControlAllowCredentials: false
+  accessControlAllowHeaders:
+    - authorization
+    - Access-Control-Allow-Origin
+    - Content-Type
+    - SOAPAction
+    - apikey
+    - Internal-Key
+  accessControlAllowMethods:
+    - GET
+    - PUT
+    - POST
+    - DELETE
+    - PATCH
+    - OPTIONS
+
+x-wso2-production-endpoints:
+  urls:
+    - http://localhost:8293/
+  type: http
+
+x-wso2-basePath: /banking-omni/1.0.0
+
+x-wso2-transports:
+  - http
+  - https
+
+x-wso2-application-security:
+  security-types:
+    - api_key
+  optional: false
+
+x-wso2-response-cache:
+  enabled: false
+  cacheTimeoutInSeconds: 300

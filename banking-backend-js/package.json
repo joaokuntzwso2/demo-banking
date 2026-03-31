@@ -1,0 +1,13 @@
+{
+  "name": "banking-backend-js",
+  "version": "1.0.0",
+  "description": "Mock core banking backend for WSO2 MI and agentic banking demo",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sequence name="CommonOutSeq" trace="enable" xmlns="http://ws.apache.org/ns/synapse">
+    <property name="OUT_TIMESTAMP"
+              expression="get-property('SYSTEM_TIME')"
+              scope="default"
+              type="LONG"/>
+
+    <script language="js"><![CDATA[
+        var inTs = mc.getProperty('IN_TIMESTAMP');
+        var outTs = mc.getProperty('OUT_TIMESTAMP');
+        if (inTs != null && outTs != null) {
+           mc.setProperty('LATENCY_MS', (outTs - inTs));
+        }
+    ]]></script>
+
+    <log level="custom">
+        <property name="log.type" value="OUT"/>
+        <property name="api.name" expression="get-property('INTERCEPTED_API_NAME')"/>
+        <property name="resource" expression="get-property('INTERCEPTED_RESOURCE')"/>
+        <property name="http.method" expression="get-property('INTERCEPTED_HTTP_METHOD')"/>
+        <property name="http.status" expression="get-property('axis2','HTTP_SC')"/>
+        <property name="correlationId" expression="get-property('CorrelationId')"/>
+        <property name="latency.ms" expression="get-property('LATENCY_MS')"/>
+    </log>
+</sequence>

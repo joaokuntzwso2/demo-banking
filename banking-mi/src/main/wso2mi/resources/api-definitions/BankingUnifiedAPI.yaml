@@ -1,0 +1,158 @@
+openapi: 3.0.1
+info:
+  title: BankingUnifiedAPI
+  description: API Definition of BankingUnifiedAPI
+  version: 1.0.0
+servers:
+- url: http://localhost:8290/
+- url: https://localhost:8253/
+paths:
+  /customers/1.0.0/profile/{customerId}:
+    get:
+      parameters:
+      - name: customerId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      responses:
+        default:
+          description: Default response
+  /accounts/1.0.0/balance/{accountId}:
+    get:
+      parameters:
+      - name: accountId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      responses:
+        default:
+          description: Default response
+  /cards/1.0.0/status/{cardId}:
+    get:
+      parameters:
+      - name: cardId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      responses:
+        default:
+          description: Default response
+  /payments/1.0.0/pix/sync:
+    post:
+      requestBody:
+        description: Sample Payload
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payload:
+                  type: object
+          application/xml:
+            schema:
+              type: object
+              xml:
+                name: payload
+        required: false
+      responses:
+        default:
+          description: Default response
+  /payments/1.0.0/pix/async:
+    post:
+      requestBody:
+        description: Sample Payload
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payload:
+                  type: object
+          application/xml:
+            schema:
+              type: object
+              xml:
+                name: payload
+        required: false
+      responses:
+        default:
+          description: Default response
+  /payments/1.0.0:
+    get:
+      responses:
+        default:
+          description: Default response
+  /transfers/1.0.0/ted/async:
+    post:
+      requestBody:
+        description: Sample Payload
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payload:
+                  type: object
+          application/xml:
+            schema:
+              type: object
+              xml:
+                name: payload
+        required: false
+      responses:
+        default:
+          description: Default response
+  /transfers/1.0.0:
+    get:
+      responses:
+        default:
+          description: Default response
+  /compliance/1.0.0/audit:
+    post:
+      requestBody:
+        description: Sample Payload
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payload:
+                  type: object
+          application/xml:
+            schema:
+              type: object
+              xml:
+                name: payload
+        required: false
+      responses:
+        default:
+          description: Default response
+  /fraud/1.0.0/alerts:
+    post:
+      requestBody:
+        description: Sample Payload
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payload:
+                  type: object
+          application/xml:
+            schema:
+              type: object
+              xml:
+                name: payload
+        required: false
+      responses:
+        default:
+          description: Default response

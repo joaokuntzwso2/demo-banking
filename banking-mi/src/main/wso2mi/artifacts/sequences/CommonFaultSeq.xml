@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sequence name="CommonFaultSeq" trace="enable" xmlns="http://ws.apache.org/ns/synapse">
+    <property name="HTTP_SC" value="500" scope="axis2" type="INTEGER"/>
+
+    <!-- Map connectivity failures to 502 so the Agentic layer can classify
+         them as BACKEND_UNAVAILABLE. -->
+    <filter xpath="get-property('ERROR_CODE') = 101503 or get-property('ERROR_CODE') = 101504 or get-property('ERROR_CODE') = 101505">
+        <then>
+            <property name="HTTP_SC" value="502" scope="axis2" type="INTEGER"/>
+        </then>
+    </filter>
+
+    <log level="full">
+        <property name="log.type" value="FAULT"/>
+        <property name="api.name" expression="get-property('API_NAME')"/>
+        <property name="resource" expression="get-property('axis2','REST_URL_POSTFIX')"/>
+        <property name="correlationId" expression="get-property('CorrelationId')"/>
+        <property name="error.code" expression="get-property('ERROR_CODE')"/>
+        <property name="error.message" expression="get-property('ERROR_MESSAGE')"/>
+    </log>
+
+    <payloadFactory media-type="json">
+        <format>
+            {
+            "message": "Error in banking integration layer",
+            "correlationId": "$1",
+            "errorCode": "$2",
+            "errorMessage": "$3"
+            }
+        </format>
+        <args>
+            <arg evaluator="xml" expression="get-property('CorrelationId')"/>
+            <arg evaluator="xml" expression="get-property('ERROR_CODE')"/>
+            <arg evaluator="xml" expression="get-property('ERROR_MESSAGE')"/>
+        </args>
+    </payloadFactory>
+
+    <respond/>
+</sequence>

@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<api xmlns="http://ws.apache.org/ns/synapse"
+     name="BankingUnifiedAPI"
+     context="/"
+     statistics="enable"
+     trace="enable">
+
+    <!-- ========================================================= -->
+    <!-- CUSTOMERS                                                 -->
+    <!-- ========================================================= -->
+
+    <!-- GET /customers/1.0.0/profile/{customerId} -->
+    <resource methods="GET" uri-template="/customers/1.0.0/profile/{customerId}">
+        <inSequence>
+            <sequence key="CommonInSeq"/>
+
+            <!-- IMPORTANT: avoid REST_URL_POSTFIX being appended implicitly -->
+            <property name="REST_URL_POSTFIX" scope="axis2" action="remove"/>
+
+            <!-- propagate correlation id as x-fapi-interaction-id -->
+            <header name="x-fapi-interaction-id"
+                    scope="transport"
+                    expression="get-property('CorrelationId')"/>
+
+            <send>
+                <endpoint key="CustomerProfileEP"/>
+            </send>
+        </inSequence>
+
+        <outSequence>
+            <sequence key="CommonOutSeq"/>
+            <send/>
+        </outSequence>
+
+        <faultSequence>
+            <sequence key="CommonFaultSeq"/>
+        </faultSequence>
+    </resource>
+
+    <!-- ========================================================= -->
+    <!-- ACCOUNTS                                                  -->
+    <!-- ========================================================= -->
+
+    <!-- GET /accounts/1.0.0/balance/{accountId} -->
+    <resource methods="GET" uri-template="/accounts/1.0.0/balance/{accountId}">
+        <inSequence>
+            <sequence key="CommonInSeq"/>
+
+            <property name="REST_URL_POSTFIX" scope="axis2" action="remove"/>
+
+            <call>
+                <endpoint key="AccountBalanceEP"/>
+            </call>
+
+            <sequence key="CommonOutSeq"/>
+            <respond/>
+        </inSequence>
+
+        <faultSequence>
+            <sequence key="CommonFaultSeq"/>
+        </faultSequence>
+    </resource>
+
+    <!-- ========================================================= -->
+    <!-- CARDS                                                     -->
+    <!-- ========================================================= -->
+
+    <!-- GET /cards/1.0.0/status/{cardId} -->
+    <resource methods="GET" uri-template="/cards/1.0.0/status/{cardId}">
+        <inSequence>
+            <sequence key="CommonInSeq"/>
+
+            <property name="REST_URL_POSTFIX" scope="axis2" action="remove"/>
+
+            <call>
+                <endpoint key="CardStatusEP"/>
+            </call>
+
+            <sequence key="CommonOutSeq"/>
+            <respond/>
+        </inSequence>
+
+        <faultSequence>
+            <sequence key="CommonFaultSeq"/>
+        </faultSequence>
+    </resource>
+
+    <!-- ========================================================= -->
+    <!-- PAYMENTS                                                  -->
+    <!-- ========================================================= -->
+
+    <!-- POST /payments/1.0.0/pix/sync -->
+    <resource methods="POST" uri-template="/payments/1.0.0/pix/sync">
+        <inSequence>
+            <sequence key="CommonInSeq"/>
+
+            <property name="messageType" value="application/json" scope="axis2"/>
+
+            <log level="custom">
+                <property name="log.type" value="PIX_PAYMENT_SYNC_REQUEST"/>
+                <property name="accountId" expression="json-eval($.accountId)"/>
+                <property name="amountBr" expression="json-eval($.amountBr)"/>
+                <property name="correlationId" expression="get-property('CorrelationId')"/>
+            </log>
+
+            <property name="REST_URL_POSTFIX" scope="axis2" action="remove"/>
+
+            <call>
+                <endpoint key="PixPaymentEP"/>
+            </call>
+
+            <sequence key="CommonOutSeq"/>
+            <respond/>
+        </inSequence>
+
+        <faultSequence>
+            <sequence key="CommonFaultSeq"/>
+        </faultSequence>
+    </resource>
+
+    <!-- POST /payments/1.0.0/pix/async -->
+    <resource methods="POST" uri-template="/payments/1.0.0/pix/async">
+        <inSequence>
+            <sequence key="CommonInSeq"/>
+
+            <property name="messageType" value="application/json" scope="axis2"/>
+
+            <log level="custom">
+                <property name="log.type" value="PIX_PAYMENT_ASYNC_REQUEST"/>
+                <property name="accountId" expression="json-eval($.accountId)"/>
+                <property name="amountBr" expression="json-eval($.amountBr)"/>
+                <property name="destinationKey" expression="json-eval($.destinationKey)"/>
+                <property name="correlationId" expression="get-property('CorrelationId')"/>
+            </log>
+
+            <property name="REST_URL_POSTFIX" scope="axis2" action="remove"/>
+
+            <property name="ASYNC_OPERATION" value="PIX_PAYMENT" scope="default"/>
+            <property name="ASYNC_QUEUE" value="PixPaymentStore" scope="default"/>
+            <property name="ASYNC_PROCESSOR" value="PixPaymentProcessor" scope="default"/>
+
+            <property name="OUT_ONLY" value="true" scope="axis2" type="STRING"/>
+
+            <store messageStore="PixPaymentStore"/>
+
+            <sequence key="AsyncAckSeq"/>
+        </inSequence>
+
+        <faultSequence>
+            <sequence key="CommonFaultSeq"/>
+        </faultSequence>
+    </resource>
+
+    <!-- GET /payments/1.0.0?paymentId=... -->
+    <resource methods="GET" uri-template="/payments/1.0.0">
+        <inSequence>
+            <sequence key="CommonInSeq"/>
+
+            <property name="REST_URL_POSTFIX"
+                      expression="concat('/payments/', get-property('query.param.paymentId'))"
+                      scope="axis2"
+                      type="STRING"/>
+
+            <send>
+                <endpoint key="PaymentStatusEP"/>
+            </send>
+        </inSequence>
+
+        <outSequence>
+            <sequence key="CommonOutSeq"/>
+            <send/>
+        </outSequence>
+
+        <faultSequence>
+            <sequence key="CommonFaultSeq"/>
+        </faultSequence>
+    </resource>
+
+    <!-- ========================================================= -->
+    <!-- TRANSFERS                                                 -->
+    <!-- ========================================================= -->
+
+    <!-- POST /transfers/1.0.0/ted/async -->
+    <resource methods="POST" uri-template="/transfers/1.0.0/ted/async">
+        <inSequence>
+            <sequence key="CommonInSeq"/>
+
+            <property name="messageType" value="application/json" scope="axis2"/>
+
+            <log level="custom">
+                <property name="log.type" value="TED_TRANSFER_ASYNC_REQUEST"/>
+                <property name="sourceAccountId" expression="json-eval($.sourceAccountId)"/>
+                <property name="destinationBankCode" expression="json-eval($.destinationBankCode)"/>
+                <property name="amountBr" expression="json-eval($.amountBr)"/>
+                <property name="correlationId" expression="get-property('CorrelationId')"/>
+            </log>
+
+            <property name="REST_URL_POSTFIX" scope="axis2" action="remove"/>
+
+            <property name="ASYNC_OPERATION" value="TED_TRANSFER" scope="default"/>
+            <property name="ASYNC_QUEUE" value="TedTransferStore" scope="default"/>
+            <property name="ASYNC_PROCESSOR" value="TedTransferProcessor" scope="default"/>
+
+            <property name="OUT_ONLY" value="true" scope="axis2" type="STRING"/>
+
+            <store messageStore="TedTransferStore"/>
+
+            <sequence key="AsyncAckSeq"/>
+        </inSequence>
+
+        <faultSequence>
+            <sequence key="CommonFaultSeq"/>
+        </faultSequence>
+    </resource>
+
+    <!-- GET /transfers/1.0.0?transferId=... -->
+    <resource methods="GET" uri-template="/transfers/1.0.0">
+        <inSequence>
+            <sequence key="CommonInSeq"/>
+
+            <property name="REST_URL_POSTFIX"
+                      expression="concat('/transfers/', get-property('query.param.transferId'))"
+                      scope="axis2"
+                      type="STRING"/>
+
+            <send>
+                <endpoint key="TransferStatusEP"/>
+            </send>
+        </inSequence>
+
+        <outSequence>
+            <sequence key="CommonOutSeq"/>
+            <send/>
+        </outSequence>
+
+        <faultSequence>
+            <sequence key="CommonFaultSeq"/>
+        </faultSequence>
+    </resource>
+
+    <!-- ========================================================= -->
+    <!-- COMPLIANCE                                                -->
+    <!-- ========================================================= -->
+
+    <!-- POST /compliance/1.0.0/audit -->
+    <resource methods="POST" uri-template="/compliance/1.0.0/audit">
+        <inSequence>
+            <sequence key="CommonInSeq"/>
+
+            <property name="messageType" value="application/json" scope="axis2"/>
+
+            <property name="REST_URL_POSTFIX" scope="axis2" action="remove"/>
+
+            <log level="custom">
+                <property name="log.type" value="COMPLIANCE_AUDIT_REQUEST"/>
+                <property name="eventType" expression="json-eval($.eventType)"/>
+                <property name="severity" expression="json-eval($.severity)"/>
+                <property name="correlationId" expression="get-property('CorrelationId')"/>
+            </log>
+
+            <call>
+                <endpoint key="ComplianceAuditEP"/>
+            </call>
+
+            <sequence key="CommonOutSeq"/>
+            <respond/>
+        </inSequence>
+
+        <faultSequence>
+            <sequence key="CommonFaultSeq"/>
+        </faultSequence>
+    </resource>
+
+    <!-- ========================================================= -->
+    <!-- FRAUD                                                     -->
+    <!-- ========================================================= -->
+
+    <!-- POST /fraud/1.0.0/alerts -->
+    <resource methods="POST" uri-template="/fraud/1.0.0/alerts">
+        <inSequence>
+            <sequence key="CommonInSeq"/>
+
+            <property name="messageType" value="application/json" scope="axis2"/>
+
+            <property name="REST_URL_POSTFIX" scope="axis2" action="remove"/>
+
+            <log level="custom">
+                <property name="log.type" value="FRAUD_ALERT_REQUEST"/>
+                <property name="alertType" expression="json-eval($.alertType)"/>
+                <property name="riskLevel" expression="json-eval($.riskLevel)"/>
+                <property name="correlationId" expression="get-property('CorrelationId')"/>
+            </log>
+
+            <call>
+                <endpoint key="FraudAlertEP"/>
+            </call>
+
+            <sequence key="CommonOutSeq"/>
+            <respond/>
+        </inSequence>
+
+        <faultSequence>
+            <sequence key="CommonFaultSeq"/>
+        </faultSequence>
+    </resource>
+
+</api>
