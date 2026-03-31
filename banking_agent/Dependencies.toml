@@ -1,9 +1,0 @@
-[[dependency]]
-org = "ballerina"
-name = "http"
-version = "2.13.0"
-
-[[dependency]]
-org = "ballerinax"
-name = "ai"
-version = "1.2.3"

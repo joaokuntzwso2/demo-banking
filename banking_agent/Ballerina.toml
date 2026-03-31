@@ -2,4 +2,4 @@
 org = "wso2demo"
 name = "banking_agent"
 version = "1.0.0"
-distribution = "2201.12.7"
+distribution = "2201.12.11"

@@ -20,7 +20,7 @@ final http:Client backendClient = checkpanic new (BACKEND_BASE_URL, {
 });
 
 // -----------------------------------------------------------------------------
-// Standardized envelope builder for tools
+// Standardized envelope builders
 // -----------------------------------------------------------------------------
 
 isolated function buildBackendSuccessEnvelope(
@@ -55,6 +55,40 @@ isolated function buildBackendErrorEnvelope(
         errorCode: errorCode,
         httpStatus: httpStatus,
         safeToRetry: safeToRetry,
+        message: message,
+        result: (),
+        correlationId: correlationId
+    };
+}
+
+isolated function buildLocalSuccessEnvelope(
+    string toolName,
+    json result,
+    string correlationId
+) returns json {
+    return {
+        tool: toolName,
+        status: "SUCCESS",
+        errorCode: "",
+        httpStatus: 200,
+        safeToRetry: false,
+        message: "",
+        result: result,
+        correlationId: correlationId
+    };
+}
+
+isolated function buildLocalErrorEnvelope(
+    string toolName,
+    string message,
+    string correlationId
+) returns json {
+    return {
+        tool: toolName,
+        status: "ERROR",
+        errorCode: "RAG_SEARCH_ERROR",
+        httpStatus: 500,
+        safeToRetry: false,
         message: message,
         result: (),
         correlationId: correlationId
@@ -125,7 +159,6 @@ isolated function buildHttpErrorEnvelope(
     string correlationId,
     json? payload = ()
 ) returns json {
-
     boolean safeToRetry = isRetryableStatusCode(statusCode);
     string msg = "Backend returned HTTP status " + statusCode.toString();
 
@@ -213,7 +246,7 @@ isolated function executeBackendPost(
 }
 
 // -----------------------------------------------------------------------------
-// Agent-specific tools
+// Existing banking tools
 // -----------------------------------------------------------------------------
 
 @ai:AgentTool {
@@ -223,13 +256,7 @@ isolated function executeBackendPost(
 public isolated function retailGetCustomerProfileTool(CustomerProfileInput input) returns json {
     string corrId = generateCorrelationIdForTool("RetailGetCustomerProfile");
     string path = string `/customers/1.0.0/profile/${input.customerId}`;
-    return executeBackendGet(
-        "RetailGetCustomerProfileTool",
-        BANKING_RETAIL_AGENT_NAME,
-        "RETAIL",
-        path,
-        corrId
-    );
+    return executeBackendGet("RetailGetCustomerProfileTool", BANKING_RETAIL_AGENT_NAME, "RETAIL", path, corrId);
 }
 
 @ai:AgentTool {
@@ -239,13 +266,7 @@ public isolated function retailGetCustomerProfileTool(CustomerProfileInput input
 public isolated function retailGetAccountBalanceTool(AccountBalanceInput input) returns json {
     string corrId = generateCorrelationIdForTool("RetailGetAccountBalance");
     string path = string `/accounts/1.0.0/balance/${input.accountId}`;
-    return executeBackendGet(
-        "RetailGetAccountBalanceTool",
-        BANKING_RETAIL_AGENT_NAME,
-        "RETAIL",
-        path,
-        corrId
-    );
+    return executeBackendGet("RetailGetAccountBalanceTool", BANKING_RETAIL_AGENT_NAME, "RETAIL", path, corrId);
 }
 
 @ai:AgentTool {
@@ -255,13 +276,7 @@ public isolated function retailGetAccountBalanceTool(AccountBalanceInput input) 
 public isolated function retailGetCardStatusTool(CardStatusInput input) returns json {
     string corrId = generateCorrelationIdForTool("RetailGetCardStatus");
     string path = string `/cards/1.0.0/status/${input.cardId}`;
-    return executeBackendGet(
-        "RetailGetCardStatusTool",
-        BANKING_RETAIL_AGENT_NAME,
-        "RETAIL",
-        path,
-        corrId
-    );
+    return executeBackendGet("RetailGetCardStatusTool", BANKING_RETAIL_AGENT_NAME, "RETAIL", path, corrId);
 }
 
 @ai:AgentTool {
@@ -295,13 +310,7 @@ public isolated function paymentsSubmitPixPaymentTool(PixPaymentInput input) ret
 public isolated function paymentsGetPaymentStatusTool(PaymentStatusInput input) returns json {
     string corrId = generateCorrelationIdForTool("PaymentsGetPaymentStatus");
     string path = string `/payments/1.0.0?paymentId=${input.paymentId}`;
-    return executeBackendGet(
-        "PaymentsGetPaymentStatusTool",
-        BANKING_PAYMENTS_AGENT_NAME,
-        "PAYMENTS",
-        path,
-        corrId
-    );
+    return executeBackendGet("PaymentsGetPaymentStatusTool", BANKING_PAYMENTS_AGENT_NAME, "PAYMENTS", path, corrId);
 }
 
 @ai:AgentTool {
@@ -311,13 +320,7 @@ public isolated function paymentsGetPaymentStatusTool(PaymentStatusInput input) 
 public isolated function paymentsGetTransferStatusTool(TransferStatusInput input) returns json {
     string corrId = generateCorrelationIdForTool("PaymentsGetTransferStatus");
     string path = string `/transfers/1.0.0?transferId=${input.transferId}`;
-    return executeBackendGet(
-        "PaymentsGetTransferStatusTool",
-        BANKING_PAYMENTS_AGENT_NAME,
-        "PAYMENTS",
-        path,
-        corrId
-    );
+    return executeBackendGet("PaymentsGetTransferStatusTool", BANKING_PAYMENTS_AGENT_NAME, "PAYMENTS", path, corrId);
 }
 
 @ai:AgentTool {
@@ -327,13 +330,7 @@ public isolated function paymentsGetTransferStatusTool(TransferStatusInput input
 public isolated function riskGetCardStatusTool(CardStatusInput input) returns json {
     string corrId = generateCorrelationIdForTool("RiskGetCardStatus");
     string path = string `/cards/1.0.0/status/${input.cardId}`;
-    return executeBackendGet(
-        "RiskGetCardStatusTool",
-        BANKING_RISK_AGENT_NAME,
-        "RISK",
-        path,
-        corrId
-    );
+    return executeBackendGet("RiskGetCardStatusTool", BANKING_RISK_AGENT_NAME, "RISK", path, corrId);
 }
 
 @ai:AgentTool {
@@ -343,13 +340,7 @@ public isolated function riskGetCardStatusTool(CardStatusInput input) returns js
 public isolated function riskGetPaymentStatusTool(PaymentStatusInput input) returns json {
     string corrId = generateCorrelationIdForTool("RiskGetPaymentStatus");
     string path = string `/payments/1.0.0?paymentId=${input.paymentId}`;
-    return executeBackendGet(
-        "RiskGetPaymentStatusTool",
-        BANKING_RISK_AGENT_NAME,
-        "RISK",
-        path,
-        corrId
-    );
+    return executeBackendGet("RiskGetPaymentStatusTool", BANKING_RISK_AGENT_NAME, "RISK", path, corrId);
 }
 
 @ai:AgentTool {
@@ -359,13 +350,7 @@ public isolated function riskGetPaymentStatusTool(PaymentStatusInput input) retu
 public isolated function riskGetTransferStatusTool(TransferStatusInput input) returns json {
     string corrId = generateCorrelationIdForTool("RiskGetTransferStatus");
     string path = string `/transfers/1.0.0?transferId=${input.transferId}`;
-    return executeBackendGet(
-        "RiskGetTransferStatusTool",
-        BANKING_RISK_AGENT_NAME,
-        "RISK",
-        path,
-        corrId
-    );
+    return executeBackendGet("RiskGetTransferStatusTool", BANKING_RISK_AGENT_NAME, "RISK", path, corrId);
 }
 
 @ai:AgentTool {
@@ -375,13 +360,7 @@ public isolated function riskGetTransferStatusTool(TransferStatusInput input) re
 public isolated function complianceGetCustomerProfileTool(CustomerProfileInput input) returns json {
     string corrId = generateCorrelationIdForTool("ComplianceGetCustomerProfile");
     string path = string `/customers/1.0.0/profile/${input.customerId}`;
-    return executeBackendGet(
-        "ComplianceGetCustomerProfileTool",
-        BANKING_COMPLIANCE_AGENT_NAME,
-        "COMPLIANCE",
-        path,
-        corrId
-    );
+    return executeBackendGet("ComplianceGetCustomerProfileTool", BANKING_COMPLIANCE_AGENT_NAME, "COMPLIANCE", path, corrId);
 }
 
 @ai:AgentTool {
@@ -404,6 +383,45 @@ public isolated function complianceCreateAuditEventTool(ComplianceAuditInput inp
         "COMPLIANCE",
         "/compliance/1.0.0/audit",
         body,
+        corrId
+    );
+}
+
+// -----------------------------------------------------------------------------
+// New RAG-backed tool
+// -----------------------------------------------------------------------------
+
+@ai:AgentTool {
+    name: "KnowledgeSearchRagTool",
+    description: "Search the in-memory banking knowledge repository and return the most relevant knowledge hits."
+}
+public isolated function knowledgeSearchRagTool(KnowledgeSearchInput input) returns json {
+    string corrId = generateCorrelationIdForTool("KnowledgeSearchRag");
+
+    int maxResults = 4;
+    int? maybeMaxResults = input["maxResults"];
+    if maybeMaxResults is int {
+        maxResults = maybeMaxResults;
+    }
+
+    if input.query.trim().length() == 0 {
+        return buildLocalErrorEnvelope(
+            "KnowledgeSearchRagTool",
+            "query must not be empty",
+            corrId
+        );
+    }
+
+    readonly & RagSearchHit[] hits = searchRagDocuments(input.query, maxResults);
+    json result = {
+        query: input.query,
+        totalMatches: hits.length(),
+        hits: hits
+    };
+
+    return buildLocalSuccessEnvelope(
+        "KnowledgeSearchRagTool",
+        result,
         corrId
     );
 }

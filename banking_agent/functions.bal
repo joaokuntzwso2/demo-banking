@@ -28,7 +28,6 @@ public isolated function safeTruncate(string value, int maxLen) returns string {
     return value.substring(0, maxLen);
 }
 
-// Masking helpers.
 public isolated function maskCustomerId(string customerId) returns string {
     return safeTruncate(customerId, 14);
 }
@@ -279,6 +278,14 @@ const string[] COMPLIANCE_KEYWORDS = [
     "conformidade", "auditoria", "regulatório", "regulatorio", "aml", "kyc"
 ];
 
+const string[] KNOWLEDGE_KEYWORDS = [
+    "policy", "policies", "handbook", "manual", "guide", "guidance",
+    "knowledge", "knowledge base", "faq", "faqs", "rule", "rules",
+    "how does the bank handle", "what does policy say", "cutoff", "cut-off",
+    "limit", "limits", "procedure", "runbook",
+    "política", "politica", "manual", "guia", "faq", "regras", "procedimento"
+];
+
 public function detectBankingDomains(string userMessage) returns BankingDomain[] {
     BankingDomain[] domains = [];
 
@@ -293,6 +300,9 @@ public function detectBankingDomains(string userMessage) returns BankingDomain[]
     }
     if containsAnySubstringIgnoreCase(userMessage, COMPLIANCE_KEYWORDS) {
         domains.push(<BankingDomain>"COMPLIANCE");
+    }
+    if containsAnySubstringIgnoreCase(userMessage, KNOWLEDGE_KEYWORDS) {
+        domains.push(<BankingDomain>"KNOWLEDGE");
     }
 
     if domains.length() == 0 {

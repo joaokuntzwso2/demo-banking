@@ -2,7 +2,7 @@
 // Domain primitives
 // -----------------------------------------------------------------------------
 
-public type BankingDomain "RETAIL"|"PAYMENTS"|"RISK"|"COMPLIANCE";
+public type BankingDomain "RETAIL"|"PAYMENTS"|"RISK"|"COMPLIANCE"|"KNOWLEDGE";
 
 // -----------------------------------------------------------------------------
 // HTTP request/response shapes
@@ -62,6 +62,55 @@ public type ComplianceAuditInput record {|
     string severity;
     string customerId;
     string details;
+|};
+
+public type KnowledgeSearchInput record {|
+    string query;
+    int? maxResults?;
+|};
+
+// -----------------------------------------------------------------------------
+// RAG admin / repository types
+// -----------------------------------------------------------------------------
+
+public type RagDocument record {|
+    string docId;
+    string title;
+    string category;
+    string docSource;
+    readonly & string[] tags;
+    string text;
+    string updatedAt;
+|};
+
+public type RagDocumentUpsertRequest record {|
+    string docId;
+    string title;
+    string category;
+    string docSource;
+    string[] tags;
+    string text;
+|};
+
+public type RagSearchRequest record {|
+    string query;
+    int? maxResults?;
+|};
+
+public type RagSearchHit record {|
+    string docId;
+    string title;
+    string category;
+    string docSource;
+    readonly & string[] tags;
+    int score;
+    string excerpt;
+|};
+
+public type RagSearchResponse record {|
+    string query;
+    int totalMatches;
+    RagSearchHit[] hits;
 |};
 
 // -----------------------------------------------------------------------------

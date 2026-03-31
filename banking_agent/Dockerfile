@@ -1,11 +1,13 @@
-FROM ballerina/ballerina:2201.12.9
-WORKDIR /app
+FROM ballerina/ballerina:2201.12.11
 
 USER root
-COPY . .
+WORKDIR /app
 
-# ensure the target directory can be cleaned/created
-RUN rm -rf /app/target && bal build
+COPY . /app
+
+RUN rm -rf /app/target /app/Dependencies.toml || true
+RUN bal build
 
 EXPOSE 8293
-CMD ["java", "-jar", "target/bin/banking_agent.jar"]
+
+CMD ["bal", "run"]
