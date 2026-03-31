@@ -1,0 +1,9 @@
+[package]
+org = "joaoluiskuntz"
+name = "banking_agent_bi"
+version = "0.1.0"
+distribution = "2201.12.9"
+title = "banking-agent-bi"
+
+[build-options]
+sticky = true

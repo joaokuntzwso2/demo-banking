@@ -1,8 +1,8 @@
 import ballerina/http;
+import ballerina/lang.'string as string;
 import ballerina/log;
 import ballerina/time;
 import ballerina/uuid;
-import ballerina/lang.'string as string;
 import ballerinax/ai;
 
 // -----------------------------------------------------------------------------
@@ -57,14 +57,14 @@ function nowUtcIsoString() returns string {
 }
 
 function buildAgentHandoffEvent(
-    string fromAgent,
-    string toAgent,
-    string domain,
-    string sessionId,
-    string message,
-    string correlationId,
-    string stage,
-    string outcome
+        string fromAgent,
+        string toAgent,
+        string domain,
+        string sessionId,
+        string message,
+        string correlationId,
+        string stage,
+        string outcome
 ) returns AgentHandoffEvent {
     return {
         eventType: "AGENT_HANDOFF_INTERCEPTED",
@@ -88,12 +88,12 @@ function dispatchAgentHandoffWebhook(AgentHandoffEvent evt) {
     string url = AGENT_HANDOFF_WEBHOOK_URL.trim();
     if url.length() == 0 {
         log:printWarn("Agent handoff webhook dispatch skipped: empty webhook URL",
-            'value = {
-                "correlationId": evt.correlationId,
-                "fromAgent": evt.fromAgent,
-                "toAgent": evt.toAgent,
-                "stage": evt.stage
-            });
+                'value = {
+                    "correlationId": evt.correlationId,
+                    "fromAgent": evt.fromAgent,
+                    "toAgent": evt.toAgent,
+                    "stage": evt.stage
+                });
         return;
     }
 
@@ -121,6 +121,19 @@ function dispatchAgentHandoffWebhook(AgentHandoffEvent evt) {
 
     if respOrErr is error {
         log:printWarn("Agent handoff webhook dispatch failed",
+                'value = {
+                    "correlationId": evt.correlationId,
+                    "fromAgent": evt.fromAgent,
+                    "toAgent": evt.toAgent,
+                    "domain": evt.domain,
+                    "stage": evt.stage,
+                    "webhookUrl": url,
+                    "error": respOrErr.message()
+                });
+        return;
+    }
+
+    log:printInfo("Agent handoff webhook dispatched",
             'value = {
                 "correlationId": evt.correlationId,
                 "fromAgent": evt.fromAgent,
@@ -128,100 +141,87 @@ function dispatchAgentHandoffWebhook(AgentHandoffEvent evt) {
                 "domain": evt.domain,
                 "stage": evt.stage,
                 "webhookUrl": url,
-                "error": respOrErr.message()
+                "statusCode": respOrErr.statusCode
             });
-        return;
-    }
-
-    log:printInfo("Agent handoff webhook dispatched",
-        'value = {
-            "correlationId": evt.correlationId,
-            "fromAgent": evt.fromAgent,
-            "toAgent": evt.toAgent,
-            "domain": evt.domain,
-            "stage": evt.stage,
-            "webhookUrl": url,
-            "statusCode": respOrErr.statusCode
-        });
 }
 
 public function beforeAgentHandoff(
-    string fromAgent,
-    string toAgent,
-    string domain,
-    string sessionId,
-    string message,
-    string correlationId
+        string fromAgent,
+        string toAgent,
+        string domain,
+        string sessionId,
+        string message,
+        string correlationId
 ) {
     if !ENABLE_AGENT_HANDOFF_INTERCEPTOR {
         return;
     }
 
     AgentHandoffEvent evt = buildAgentHandoffEvent(
-        fromAgent,
-        toAgent,
-        domain,
-        sessionId,
-        message,
-        correlationId,
-        "BEFORE",
-        "PENDING"
+            fromAgent,
+            toAgent,
+            domain,
+            sessionId,
+            message,
+            correlationId,
+            "BEFORE",
+            "PENDING"
     );
 
     log:printInfo("AGENT_HANDOFF_INTERCEPTED", 'value = evt);
 
     if ENABLE_AGENT_HANDOFF_VERBOSE_LOG {
         log:printInfo("Demo action executed on agent-to-agent interception",
-            'value = {
-                "correlationId": correlationId,
-                "fromAgent": fromAgent,
-                "toAgent": toAgent,
-                "domain": domain,
-                "stage": "BEFORE",
-                "action": "CUSTOM_HOOK_EXECUTED"
-            });
+                'value = {
+                    "correlationId": correlationId,
+                    "fromAgent": fromAgent,
+                    "toAgent": toAgent,
+                    "domain": domain,
+                    "stage": "BEFORE",
+                    "action": "CUSTOM_HOOK_EXECUTED"
+                });
     }
 
     dispatchAgentHandoffWebhook(evt);
 }
 
 public function afterAgentHandoff(
-    string fromAgent,
-    string toAgent,
-    string domain,
-    string sessionId,
-    string message,
-    string correlationId,
-    string outcome
+        string fromAgent,
+        string toAgent,
+        string domain,
+        string sessionId,
+        string message,
+        string correlationId,
+        string outcome
 ) {
     if !ENABLE_AGENT_HANDOFF_INTERCEPTOR {
         return;
     }
 
     AgentHandoffEvent evt = buildAgentHandoffEvent(
-        fromAgent,
-        toAgent,
-        domain,
-        sessionId,
-        message,
-        correlationId,
-        "AFTER",
-        outcome
+            fromAgent,
+            toAgent,
+            domain,
+            sessionId,
+            message,
+            correlationId,
+            "AFTER",
+            outcome
     );
 
     log:printInfo("AGENT_HANDOFF_INTERCEPTED", 'value = evt);
 
     if ENABLE_AGENT_HANDOFF_VERBOSE_LOG {
         log:printInfo("Demo action executed on agent-to-agent interception",
-            'value = {
-                "correlationId": correlationId,
-                "fromAgent": fromAgent,
-                "toAgent": toAgent,
-                "domain": domain,
-                "stage": "AFTER",
-                "outcome": outcome,
-                "action": "CUSTOM_HOOK_EXECUTED"
-            });
+                'value = {
+                    "correlationId": correlationId,
+                    "fromAgent": fromAgent,
+                    "toAgent": toAgent,
+                    "domain": domain,
+                    "stage": "AFTER",
+                    "outcome": outcome,
+                    "action": "CUSTOM_HOOK_EXECUTED"
+                });
     }
 
     dispatchAgentHandoffWebhook(evt);
@@ -232,8 +232,8 @@ public function afterAgentHandoff(
 // -----------------------------------------------------------------------------
 
 function containsAnySubstringIgnoreCase(
-    string sourceString,
-    readonly & string[] markers
+        string sourceString,
+        readonly & string[] markers
 ) returns boolean {
     if sourceString.length() == 0 {
         return false;
@@ -251,39 +251,116 @@ function containsAnySubstringIgnoreCase(
 }
 
 const string[] RETAIL_KEYWORDS = [
-    "customer", "profile", "customer id", "customerid",
-    "account", "accounts", "balance",
-    "card", "cards", "debit card", "credit card",
-    "cust-br", "acc-", "card-",
-    "cliente", "conta", "saldo", "cartão", "cartao", "perfil"
+    "customer",
+    "profile",
+    "customer id",
+    "customerid",
+    "account",
+    "accounts",
+    "balance",
+    "card",
+    "cards",
+    "debit card",
+    "credit card",
+    "cust-br",
+    "acc-",
+    "card-",
+    "cliente",
+    "conta",
+    "saldo",
+    "cartão",
+    "cartao",
+    "perfil"
 ];
 
 const string[] PAYMENTS_KEYWORDS = [
-    "pix", "payment", "payments", "pay",
-    "transfer", "transfers", "ted",
-    "settled", "settlement", "beneficiary",
-    "paymentid", "transferid", "payment id", "transfer id",
-    "pagamento", "pagamentos", "transferência", "transferencia", "beneficiário", "beneficiario"
+    "pix",
+    "payment",
+    "payments",
+    "pay",
+    "transfer",
+    "transfers",
+    "ted",
+    "settled",
+    "settlement",
+    "beneficiary",
+    "paymentid",
+    "transferid",
+    "payment id",
+    "transfer id",
+    "pagamento",
+    "pagamentos",
+    "transferência",
+    "transferencia",
+    "beneficiário",
+    "beneficiario"
 ];
 
 const string[] RISK_KEYWORDS = [
-    "risk", "fraud", "fraudulent", "suspicious",
-    "review", "under review", "blocked", "monitoring", "alert",
-    "risco", "fraude", "suspeito", "revisão", "revisao", "bloqueado", "alerta"
+    "risk",
+    "fraud",
+    "fraudulent",
+    "suspicious",
+    "review",
+    "under review",
+    "blocked",
+    "monitoring",
+    "alert",
+    "risco",
+    "fraude",
+    "suspeito",
+    "revisão",
+    "revisao",
+    "bloqueado",
+    "alerta"
 ];
 
 const string[] COMPLIANCE_KEYWORDS = [
-    "compliance", "kyc", "aml", "sanction", "audit", "regulatory",
-    "due diligence", "review case", "review event",
-    "conformidade", "auditoria", "regulatório", "regulatorio", "aml", "kyc"
+    "compliance",
+    "kyc",
+    "aml",
+    "sanction",
+    "audit",
+    "regulatory",
+    "due diligence",
+    "review case",
+    "review event",
+    "conformidade",
+    "auditoria",
+    "regulatório",
+    "regulatorio",
+    "aml",
+    "kyc"
 ];
 
 const string[] KNOWLEDGE_KEYWORDS = [
-    "policy", "policies", "handbook", "manual", "guide", "guidance",
-    "knowledge", "knowledge base", "faq", "faqs", "rule", "rules",
-    "how does the bank handle", "what does policy say", "cutoff", "cut-off",
-    "limit", "limits", "procedure", "runbook",
-    "política", "politica", "manual", "guia", "faq", "regras", "procedimento"
+    "policy",
+    "policies",
+    "handbook",
+    "manual",
+    "guide",
+    "guidance",
+    "knowledge",
+    "knowledge base",
+    "faq",
+    "faqs",
+    "rule",
+    "rules",
+    "how does the bank handle",
+    "what does policy say",
+    "cutoff",
+    "cut-off",
+    "limit",
+    "limits",
+    "procedure",
+    "runbook",
+    "política",
+    "politica",
+    "manual",
+    "guia",
+    "faq",
+    "regras",
+    "procedimento"
 ];
 
 public function detectBankingDomains(string userMessage) returns BankingDomain[] {
@@ -316,9 +393,17 @@ public function detectBankingDomains(string userMessage) returns BankingDomain[]
 // -----------------------------------------------------------------------------
 
 const string[] TRANSIENT_LLM_ERROR_MARKERS = [
-    "rate limit", "tpm", "rpm", "timeout", "timed out",
-    "overloaded", "server error", "unavailable",
-    "temporarily unavailable", "try again later", "gateway timeout"
+    "rate limit",
+    "tpm",
+    "rpm",
+    "timeout",
+    "timed out",
+    "overloaded",
+    "server error",
+    "unavailable",
+    "temporarily unavailable",
+    "try again later",
+    "gateway timeout"
 ];
 
 public function isTransientLLMError(ai:Error err) returns boolean {
@@ -346,10 +431,10 @@ public isolated function estimateTokenCount(string text) returns int {
 }
 
 public isolated function buildLlmUsage(
-    string responseModel,
-    string promptText,
-    string completionText,
-    int? remainingTokenCount = ()
+        string responseModel,
+        string promptText,
+        string completionText,
+        int? remainingTokenCount = ()
 ) returns LlmUsage {
 
     int promptTokens = estimateTokenCount(promptText);

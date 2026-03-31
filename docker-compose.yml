@@ -33,7 +33,7 @@ services:
       - ./banking-mi/deployment/deployment.toml:/home/wso2carbon/wso2mi-4.5.0/conf/deployment.toml:ro
 
   banking-agent:
-    build: ./banking_agent
+    build: ./banking_agent_bi
     container_name: banking-agent
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
