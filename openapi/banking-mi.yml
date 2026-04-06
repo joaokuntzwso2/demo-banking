@@ -1,467 +1,249 @@
 openapi: 3.0.3
 info:
-  title: Banking MI - Unified API
+  title: Banking MI Unified API
   version: 1.0.0
-  description: |
-    Unified WSO2 Micro Integrator facade for the Banking demo.
-    This OpenAPI spec matches the deployed Synapse API `BankingUnifiedAPI`
-    and its resources (customers, accounts, cards, payments, transfers, compliance, fraud).
+  description: Unified WSO2 Micro Integrator facade for the banking demo.
 
 servers:
-  - url: http://localhost:8290
-
-tags:
-  - name: Customers
-  - name: Accounts
-  - name: Cards
-  - name: Payments
-  - name: Transfers
-  - name: Compliance
-  - name: Fraud
+  - url: http://banking-mi:8290
 
 paths:
   /customers/1.0.0/profile/{customerId}:
     get:
-      tags: [Customers]
       operationId: getCustomerProfileViaMI
-      summary: Get customer profile (sync)
-      description: Proxies to backend `/customers/profile/{customerId}`.
+      summary: Get customer profile
       parameters:
         - name: customerId
           in: path
           required: true
           schema:
             type: string
-          example: CUST-BR-001
       responses:
-        "200":
-          description: Customer profile found
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
+        '200':
+          description: Customer profile returned
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CustomerProfile"
-        "404":
+                $ref: '#/components/schemas/CustomerProfile'
+        '404':
           description: Customer not found
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-        "500":
-          $ref: "#/components/responses/IntegrationError"
-        "502":
-          $ref: "#/components/responses/IntegrationError"
+        '500':
+          description: Integration error
+        '502':
+          description: Backend unavailable
 
   /accounts/1.0.0/balance/{accountId}:
     get:
-      tags: [Accounts]
       operationId: getAccountBalanceViaMI
-      summary: Get account balance (sync)
-      description: Proxies to backend `/accounts/{accountId}/balance`.
+      summary: Get account balance
       parameters:
         - name: accountId
           in: path
           required: true
           schema:
             type: string
-          example: ACC-CHK-BR-001
       responses:
-        "200":
-          description: Account balance found
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
+        '200':
+          description: Account balance returned
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AccountBalance"
-        "404":
+                $ref: '#/components/schemas/AccountBalance'
+        '404':
           description: Account not found
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-        "500":
-          $ref: "#/components/responses/IntegrationError"
-        "502":
-          $ref: "#/components/responses/IntegrationError"
+        '500':
+          description: Integration error
+        '502':
+          description: Backend unavailable
 
   /cards/1.0.0/status/{cardId}:
     get:
-      tags: [Cards]
       operationId: getCardStatusViaMI
-      summary: Get card status (sync)
-      description: Proxies to backend `/cards/{cardId}/status`.
+      summary: Get card status
       parameters:
         - name: cardId
           in: path
           required: true
           schema:
             type: string
-          example: CARD-CR-BR-001
       responses:
-        "200":
-          description: Card found
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
+        '200':
+          description: Card status returned
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CardStatus"
-        "404":
+                $ref: '#/components/schemas/CardStatus'
+        '404':
           description: Card not found
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-        "500":
-          $ref: "#/components/responses/IntegrationError"
-        "502":
-          $ref: "#/components/responses/IntegrationError"
+        '500':
+          description: Integration error
+        '502':
+          description: Backend unavailable
 
   /payments/1.0.0/pix/sync:
     post:
-      tags: [Payments]
       operationId: createPixPaymentSyncViaMI
-      summary: Submit PIX payment (sync)
-      description: Proxies to backend `/payments/pix`.
+      summary: Submit PIX payment synchronously
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PixPaymentRequest"
+              $ref: '#/components/schemas/PixPaymentRequest'
       responses:
-        "201":
-          description: PIX payment created
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
+        '200':
+          description: PIX payment processed
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PixPayment"
-        "400":
-          description: Backend validation or business error
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "500":
-          $ref: "#/components/responses/IntegrationError"
-        "502":
-          $ref: "#/components/responses/IntegrationError"
+                $ref: '#/components/schemas/PixPayment'
+        '400':
+          description: Validation or business error
+        '500':
+          description: Integration error
+        '502':
+          description: Backend unavailable
 
   /payments/1.0.0/pix/async:
     post:
-      tags: [Payments]
       operationId: createPixPaymentAsyncViaMI
-      summary: Queue PIX payment (async)
-      description: |
-        Stores a message in MI message store `PixPaymentStore`.
-        MessageProcessor `PixPaymentProcessor` forwards to backend `/payments/pix`.
-        Returns 202 QUEUED via `AsyncAckSeq`.
+      summary: Queue PIX payment asynchronously
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PixPaymentRequest"
+              $ref: '#/components/schemas/PixPaymentAsyncRequest'
       responses:
-        "202":
-          description: Queued for async processing
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
+        '202':
+          description: PIX payment queued
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AsyncAck"
-        "500":
-          $ref: "#/components/responses/IntegrationError"
-        "502":
-          $ref: "#/components/responses/IntegrationError"
+                $ref: '#/components/schemas/AsyncAck'
+        '500':
+          description: Integration error
+        '502':
+          description: Backend unavailable
 
   /payments/1.0.0:
     get:
-      tags: [Payments]
       operationId: getPaymentStatusViaMI
-      summary: Get payment status (sync)
-      description: Proxies to backend `/payments/{paymentId}` using query parameter `paymentId`.
+      summary: Get payment status
       parameters:
         - name: paymentId
           in: query
           required: true
           schema:
             type: string
-          example: PMT-PIX-20260315-0001
       responses:
-        "200":
-          description: Payment found
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
+        '200':
+          description: Payment returned
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PixPayment"
-        "404":
+                $ref: '#/components/schemas/PixPayment'
+        '404':
           description: Payment not found
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-        "500":
-          $ref: "#/components/responses/IntegrationError"
-        "502":
-          $ref: "#/components/responses/IntegrationError"
+        '500':
+          description: Integration error
+        '502':
+          description: Backend unavailable
 
   /transfers/1.0.0/ted/async:
     post:
-      tags: [Transfers]
       operationId: createTedTransferAsyncViaMI
-      summary: Queue TED transfer (async)
-      description: |
-        Stores a message in MI message store `TedTransferStore`.
-        MessageProcessor `TedTransferProcessor` forwards to backend `/transfers/ted`.
-        Returns 202 QUEUED via `AsyncAckSeq`.
+      summary: Queue TED transfer asynchronously
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TedTransferRequest"
+              $ref: '#/components/schemas/TedTransferRequest'
       responses:
-        "202":
-          description: Queued for async processing
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
+        '202':
+          description: TED transfer queued
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AsyncAck"
-        "500":
-          $ref: "#/components/responses/IntegrationError"
-        "502":
-          $ref: "#/components/responses/IntegrationError"
+                $ref: '#/components/schemas/AsyncAck'
+        '500':
+          description: Integration error
+        '502':
+          description: Backend unavailable
 
   /transfers/1.0.0:
     get:
-      tags: [Transfers]
       operationId: getTransferStatusViaMI
-      summary: Get transfer status (sync)
-      description: Proxies to backend `/transfers/{transferId}` using query parameter `transferId`.
+      summary: Get transfer status
       parameters:
         - name: transferId
           in: query
           required: true
           schema:
             type: string
-          example: TRF-20260315-0001
       responses:
-        "200":
-          description: Transfer found
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
+        '200':
+          description: Transfer returned
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TedTransfer"
-        "404":
+                $ref: '#/components/schemas/TedTransfer'
+        '404':
           description: Transfer not found
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-        "500":
-          $ref: "#/components/responses/IntegrationError"
-        "502":
-          $ref: "#/components/responses/IntegrationError"
+        '500':
+          description: Integration error
+        '502':
+          description: Backend unavailable
 
   /compliance/1.0.0/audit:
     post:
-      tags: [Compliance]
       operationId: postComplianceAuditViaMI
-      summary: Submit a compliance audit event (sync)
-      description: Proxies to backend `/compliance/audit`.
+      summary: Create compliance audit event
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ComplianceEventInput"
+              $ref: '#/components/schemas/ComplianceEventInput'
       responses:
-        "201":
-          description: Stored compliance event
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
+        '200':
+          description: Compliance event recorded
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ComplianceEventStored"
-        "500":
-          $ref: "#/components/responses/IntegrationError"
-        "502":
-          $ref: "#/components/responses/IntegrationError"
+                type: object
+        '500':
+          description: Integration error
+        '502':
+          description: Backend unavailable
 
   /fraud/1.0.0/alerts:
     post:
-      tags: [Fraud]
       operationId: postFraudAlertViaMI
-      summary: Submit a fraud alert event (sync)
-      description: Proxies to backend `/fraud/alerts`.
+      summary: Create fraud alert event
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/FraudAlertInput"
+              $ref: '#/components/schemas/FraudAlertInput'
       responses:
-        "201":
-          description: Stored fraud alert
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
+        '200':
+          description: Fraud alert recorded
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FraudAlertStored"
-        "500":
-          $ref: "#/components/responses/IntegrationError"
-        "502":
-          $ref: "#/components/responses/IntegrationError"
+                type: object
+        '500':
+          description: Integration error
+        '502':
+          description: Backend unavailable
 
 components:
-  headers:
-    XCorrelationId:
-      description: Correlation ID for tracing across MI and downstream services.
-      schema:
-        type: string
-
-  responses:
-    IntegrationError:
-      description: MI integration fault payload (CommonFaultSeq)
-      headers:
-        X-Correlation-Id:
-          $ref: "#/components/headers/XCorrelationId"
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/IntegrationError"
-
   schemas:
-    MessageResponse:
-      type: object
-      additionalProperties: false
-      properties:
-        message:
-          type: string
-      required: [message]
-
-    ErrorResponse:
-      type: object
-      additionalProperties: false
-      properties:
-        message:
-          type: string
-        correlationId:
-          type: string
-        error:
-          type: string
-        details:
-          type: object
-          additionalProperties: true
-      required: [message, correlationId, error]
-
-    IntegrationError:
-      type: object
-      additionalProperties: false
-      properties:
-        message:
-          type: string
-          example: Error in banking integration layer
-        correlationId:
-          type: string
-          example: urn:uuid:1234...
-        errorCode:
-          type: string
-          example: "101503"
-        errorMessage:
-          type: string
-          example: Error connecting to the backend
-      required: [message, correlationId, errorCode, errorMessage]
-
-    AsyncAck:
-      type: object
-      additionalProperties: false
-      properties:
-        status:
-          type: string
-          enum: [QUEUED]
-        operation:
-          type: string
-          example: PIX_PAYMENT
-        correlationId:
-          type: string
-          example: urn:uuid:1234...
-        queue:
-          type: string
-          example: PixPaymentStore
-        processor:
-          type: string
-          example: PixPaymentProcessor
-        timestamp:
-          type: string
-          example: "1736154485123"
-      required: [status, operation, correlationId, queue, processor, timestamp]
-
-    CustomerAccountRef:
-      type: object
-      additionalProperties: false
-      properties:
-        accountId:
-          type: string
-        type:
-          type: string
-      required: [accountId, type]
-
-    CustomerCardRef:
-      type: object
-      additionalProperties: false
-      properties:
-        cardId:
-          type: string
-        type:
-          type: string
-      required: [cardId, type]
-
     CustomerProfile:
       type: object
-      additionalProperties: false
       properties:
         customerId:
           type: string
@@ -469,95 +251,76 @@ components:
           type: string
         name:
           type: string
-        segment:
-          type: string
         kycStatus:
+          type: string
+        riskRating:
+          type: string
+        preferredBranchId:
           type: string
         accounts:
           type: array
           items:
-            $ref: "#/components/schemas/CustomerAccountRef"
+            type: string
         cards:
           type: array
           items:
-            $ref: "#/components/schemas/CustomerCardRef"
-      required:
-        - customerId
-        - cpf
-        - name
-        - segment
-        - kycStatus
-        - accounts
-        - cards
+            type: string
 
     AccountBalance:
       type: object
-      additionalProperties: false
       properties:
         accountId:
           type: string
         customerId:
           type: string
-        type:
+        accountType:
           type: string
         currency:
           type: string
-        balance:
-          type: number
-          format: double
         availableBalance:
           type: number
-          format: double
-        dailyPixLimit:
+        ledgerBalance:
           type: number
-          format: double
         status:
           type: string
-      required:
-        - accountId
-        - customerId
-        - type
-        - currency
-        - balance
-        - availableBalance
-        - dailyPixLimit
-        - status
+        dailyPixLimit:
+          type: number
+        branchId:
+          type: string
+        lastUpdatedAt:
+          type: string
+          format: date-time
 
     CardStatus:
       type: object
-      additionalProperties: false
       properties:
         cardId:
           type: string
         customerId:
           type: string
-        accountId:
+        cardType:
           type: string
-        type:
-          type: string
-        brand:
-          type: string
-        maskedPan:
+        network:
           type: string
         status:
           type: string
-          enum: [ACTIVE, BLOCKED, UNDER_REVIEW, EXPIRED]
+        limit:
+          type: number
+        availableLimit:
+          type: number
+        embossedName:
+          type: string
+        last4:
+          type: string
+        internationalEnabled:
+          type: boolean
         lastUpdatedAt:
           type: string
           format: date-time
-      required:
-        - cardId
-        - customerId
-        - accountId
-        - type
-        - brand
-        - maskedPan
-        - status
-        - lastUpdatedAt
 
     PixPaymentRequest:
       type: object
-      additionalProperties: false
+      required: [accountId, beneficiaryName, beneficiaryBank, amountBr]
       properties:
         accountId:
           type: string
@@ -567,120 +330,84 @@ components:
           type: string
         amountBr:
           type: number
-          format: double
-      required: [accountId, beneficiaryName, beneficiaryBank, amountBr]
+
+    PixPaymentAsyncRequest:
+      type: object
+      required: [accountId, beneficiaryName, beneficiaryBank, destinationKey, amountBr]
+      properties:
+        accountId:
+          type: string
+        beneficiaryName:
+          type: string
+        beneficiaryBank:
+          type: string
+        destinationKey:
+          type: string
+        amountBr:
+          type: number
 
     PixPayment:
       type: object
-      additionalProperties: false
       properties:
         paymentId:
           type: string
         accountId:
           type: string
-        customerId:
+        paymentRail:
           type: string
-        method:
-          type: string
-          enum: [PIX]
         beneficiaryName:
           type: string
         beneficiaryBank:
           type: string
         amountBr:
           type: number
-          format: double
-        currency:
-          type: string
         status:
           type: string
-          enum: [COMPLETED, PENDING_REVIEW, FAILED]
         createdAt:
           type: string
           format: date-time
         lastUpdatedAt:
           type: string
           format: date-time
-      required:
-        - paymentId
-        - accountId
-        - customerId
-        - method
-        - beneficiaryName
-        - beneficiaryBank
-        - amountBr
-        - currency
-        - status
-        - createdAt
-        - lastUpdatedAt
 
     TedTransferRequest:
       type: object
-      additionalProperties: false
+      required: [sourceAccountId, destinationBankCode, amountBr]
       properties:
-        fromAccountId:
+        sourceAccountId:
           type: string
-        toBankCode:
-          type: string
-        toAccountMasked:
+        destinationBankCode:
           type: string
         amountBr:
           type: number
-          format: double
-        channel:
-          type: string
-      required: [fromAccountId, toBankCode, toAccountMasked, amountBr, channel]
 
     TedTransfer:
       type: object
-      additionalProperties: false
       properties:
         transferId:
           type: string
         fromAccountId:
           type: string
-        customerId:
-          type: string
-        method:
-          type: string
-          enum: [TED]
         toBankCode:
           type: string
         toAccountMasked:
           type: string
         amountBr:
           type: number
-          format: double
-        currency:
-          type: string
         channel:
           type: string
         status:
           type: string
-          enum: [COMPLETED, PENDING_REVIEW, FAILED]
         createdAt:
           type: string
           format: date-time
         lastUpdatedAt:
           type: string
           format: date-time
-      required:
-        - transferId
-        - fromAccountId
-        - customerId
-        - method
-        - toBankCode
-        - toAccountMasked
-        - amountBr
-        - currency
-        - channel
-        - status
-        - createdAt
-        - lastUpdatedAt
 
     ComplianceEventInput:
       type: object
-      additionalProperties: false
+      required: [eventType, severity, customerId, details]
       properties:
         eventType:
           type: string
@@ -690,24 +417,10 @@ components:
           type: string
         details:
           type: string
-      required: [eventType, severity, customerId, details]
-
-    ComplianceEventStored:
-      allOf:
-        - $ref: "#/components/schemas/ComplianceEventInput"
-        - type: object
-          additionalProperties: false
-          properties:
-            complianceId:
-              type: string
-            createdAt:
-              type: string
-              format: date-time
-          required: [complianceId, createdAt]
 
     FraudAlertInput:
       type: object
-      additionalProperties: false
+      required: [alertType, riskLevel, details]
       properties:
         alertType:
           type: string
@@ -721,17 +434,19 @@ components:
           nullable: true
         details:
           type: string
-      required: [alertType, riskLevel, details]
 
-    FraudAlertStored:
-      allOf:
-        - $ref: "#/components/schemas/FraudAlertInput"
-        - type: object
-          additionalProperties: false
-          properties:
-            fraudAlertId:
-              type: string
-            createdAt:
-              type: string
-              format: date-time
-          required: [fraudAlertId, createdAt]
+    AsyncAck:
+      type: object
+      properties:
+        status:
+          type: string
+        operation:
+          type: string
+        correlationId:
+          type: string
+        queue:
+          type: string
+        processor:
+          type: string
+        timestamp:
+          type: string

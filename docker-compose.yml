@@ -36,16 +36,46 @@ services:
     build: ./banking_agent_bi
     container_name: banking-agent
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - BACKEND_BASE_URL=http://banking-mi:8290
       - HTTP_LISTENER_PORT=8293
     ports:
       - "8293:8293"
     depends_on:
       - wso2mi
+      - apim
+    volumes:
+      - ./banking_agent_bi/Config.toml:/home/ballerina/Config.toml:ro
+      - ./banking_agent_bi/Config.toml:/workspace/Config.toml:ro
+      - ./banking_agent_bi/Config.toml:/home/ballerina/src/Config.toml:ro
 
   banking-webhook-listener:
     build: ./banking-webhook-listener
     container_name: banking-webhook-listener
     ports:
       - "8099:8099"
+
+  apim:
+    image: wso2/wso2am:4.6.0
+    container_name: apim
+    ports:
+      - "9443:9443"
+      - "8243:8243"
+      - "8280:8280"
+    environment:
+      JAVA_OPTS: >
+        -Xms512m
+        -Xmx2048m
+        -XX:MaxMetaspaceSize=512m
+        -XX:+UseG1GC
+    volumes:
+      - apim_home:/home/wso2carbon
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9443 || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+      start_period: 120s
+
+volumes:
+  apim_home:

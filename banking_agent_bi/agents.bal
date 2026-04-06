@@ -2,7 +2,7 @@ import ballerina/log;
 import ballerinax/ai;
 
 // -----------------------------------------------------------------------------
-// System prompts for Banking Agentic APIs
+// Agentic Prompting
 // -----------------------------------------------------------------------------
 
 const string BANKING_RETAIL_SYSTEM_PROMPT = string `
@@ -274,17 +274,29 @@ public final ai:Agent overlayAgent;
 
 const int AGENT_MEMORY_SIZE = 15;
 
-final ai:OpenAiProvider llmProvider = checkpanic new (
-    OPENAI_API_KEY,
-    modelType = OPENAI_MODEL
-);
-
+final ai:OpenAiProvider llmProvider = USE_WSO2_AI_GATEWAY_FOR_LLM
+    ? checkpanic new (
+        AI_GATEWAY_LLM_ACCESS_TOKEN,
+        modelType = OPENAI_MODEL,
+        serviceUrl = AI_GATEWAY_LLM_SERVICE_URL
+      )
+    : checkpanic new (
+        OPENAI_API_KEY,
+        modelType = OPENAI_MODEL
+      );
 // -----------------------------------------------------------------------------
 // Module init
 // -----------------------------------------------------------------------------
 
 function init() {
     log:printInfo("Initializing Banking Agentic APIs (LLM + tools)");
+   
+    log:printInfo("LLM provider mode selected",
+        'value = {
+            "mode": USE_WSO2_AI_GATEWAY_FOR_LLM ? "WSO2_AI_GATEWAY" : "DIRECT_VENDOR",
+            "serviceUrl": USE_WSO2_AI_GATEWAY_FOR_LLM ? AI_GATEWAY_LLM_SERVICE_URL : "DIRECT_OPENAI"
+        }
+    );
 
     ai:ToolConfig[] retailTools = ai:getToolConfigs([
         retailGetCustomerProfileTool,

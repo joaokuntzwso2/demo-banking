@@ -1,15 +1,18 @@
-# Banking Demo with JavaScript Core Backend, WSO2 Micro Integrator, and Ballerina Agentic Layer
+# Banking Demo with JavaScript Core Backend, WSO2 Micro Integrator, WSO2 API Manager AI Gateway, and Ballerina Agentic Layer
 
-This project is a complete banking demo that combines a mock core banking backend, a WSO2 Micro Integrator mediation layer, and a Ballerina-based agentic orchestration layer into one coherent architecture.
+This project is a complete banking demo that combines a mock core banking backend, a WSO2 Micro Integrator mediation layer, a WSO2 API Manager AI Gateway layer, and a Ballerina-based agentic orchestration layer into one coherent architecture.
 
 It is designed as a practical engineering blueprint for:
 
-- API-led integration with WSO2 Micro Integrator
-- resilient synchronous and asynchronous orchestration patterns
-- agent-to-tool interactions through an integration layer
-- observability with correlation IDs and interception logs
-- safe multi-agent orchestration with post-processing overlay controls
-- documentation-oriented RAG with an in-memory knowledge repository
+* API-led integration with WSO2 Micro Integrator
+* resilient synchronous and asynchronous orchestration patterns
+* agent-to-tool interactions through an integration layer
+* observability with correlation IDs and interception logs
+* safe multi-agent orchestration with post-processing overlay controls
+* documentation-oriented RAG with an in-memory knowledge repository
+* OpenAI-compatible AI adapter exposure for agent APIs
+* APIM-managed AI APIs with centralized guardrails and governance
+* agent-to-agent orchestration routed through APIM instead of direct internal calls
 
 The implementation follows the same architectural style as the Pharma reference project, adapted to a banking workflow.
 
@@ -17,7 +20,7 @@ The implementation follows the same architectural style as the Pharma reference 
 
 # Architecture Overview
 
-The solution has five main components.
+The solution has seven main components.
 
 ## 1. `banking-backend-js`
 
@@ -25,24 +28,24 @@ This is the mock core banking backend.
 
 It simulates:
 
-- customers
-- accounts and balances
-- cards and card states
-- PIX payments
-- TED transfers
-- compliance audit events
-- fraud alerts
-- processor event telemetry
+* customers
+* accounts and balances
+* cards and card states
+* PIX payments
+* TED transfers
+* compliance audit events
+* fraud alerts
+* processor event telemetry
 
 It is intentionally simple and in-memory, but it behaves like a real downstream banking domain system from the point of view of the integration and agentic layers.
 
 ### Main responsibilities
 
-- expose operational REST endpoints
-- validate request payloads
-- maintain in-memory state
-- simulate business statuses such as settled, pending review, temp blocked, insufficient balance, and validation failures
-- store operational events for later inspection
+* expose operational REST endpoints
+* validate request payloads
+* maintain in-memory state
+* simulate business statuses such as settled, pending review, temp blocked, insufficient balance, and validation failures
+* store operational events for later inspection
 
 ---
 
@@ -54,31 +57,31 @@ It acts as the controlled integration facade between the core backend and upper 
 
 It provides:
 
-- canonical banking APIs
-- request mediation
-- response mediation
-- unified error handling
-- correlation propagation
-- agent-tool interception logging
-- asynchronous request acknowledgment and background forwarding with message stores/processors
-- circuit-breaker style endpoint suspension and failure handling
+* canonical banking APIs
+* request mediation
+* response mediation
+* unified error handling
+* correlation propagation
+* agent-tool interception logging
+* asynchronous request acknowledgment and background forwarding with message stores/processors
+* circuit-breaker style endpoint suspension and failure handling
 
 ### Main responsibilities
 
-- expose stable integration APIs on top of backend services
-- translate integration-level failure states into normalized responses
-- support synchronous and asynchronous flows
-- centralize observability and policy-like behavior
-- separate agents from direct access to core systems
+* expose stable integration APIs on top of backend services
+* translate integration-level failure states into normalized responses
+* support synchronous and asynchronous flows
+* centralize observability and policy-like behavior
+* separate agents from direct access to core systems
 
 ### Why MI exists in this architecture
 
 The agentic layer must never talk directly to the backend. It should only use tools that call the integration layer. This preserves:
 
-- separation of concerns
-- observability
-- controlled exposure
-- future governance with WSO2 API Manager if desired
+* separation of concerns
+* observability
+* controlled exposure
+* future governance with WSO2 API Manager
 
 ---
 
@@ -88,64 +91,149 @@ This is the Ballerina-based agentic layer.
 
 It implements:
 
-- specialized agents
-- tool-based execution through the MI layer
-- domain routing
-- omni orchestration
-- overlay-based safety post-processing
-- handoff interception events and webhook notifications
-- LLM usage estimation and response envelopes
-- an in-memory RAG repository
-- a dedicated knowledge-oriented agent
+* specialized agents
+* tool-based execution through the MI layer
+* domain routing
+* omni orchestration
+* overlay-based safety post-processing
+* handoff interception events and webhook notifications
+* LLM usage estimation and response envelopes
+* an in-memory RAG repository
+* a dedicated knowledge-oriented agent
+* OpenAI-compatible AI adapter endpoints for APIM AI exposure
+* omni A2A orchestration that calls sub-agents through APIM AI APIs
 
 ### Specialized agents
 
-- `Retail Agent`
-  - customer profile
-  - account balance
-  - card status
+* `Retail Agent`
 
-- `Payments Agent`
-  - PIX submission
-  - payment status
-  - transfer status
+  * customer profile
+  * account balance
+  * card status
 
-- `Risk Agent`
-  - card risk-relevant status
-  - payment review state
-  - transfer review state
+* `Payments Agent`
 
-- `Compliance Agent`
-  - customer compliance context
-  - compliance audit event creation
+  * PIX submission
+  * payment status
+  * transfer status
 
-- `Knowledge Agent`
-  - searches an in-memory banking documentation repository
-  - answers policy, FAQ, guidance, runbook, and procedural questions
-  - only uses RAG search results and does not access banking systems directly
+* `Risk Agent`
 
-- `Omni Agent`
-  - routes a user request to one or more specialized agents
-  - combines their outputs
-  - passes the result through a safety overlay
+  * card risk-relevant status
+  * payment review state
+  * transfer review state
 
-- `Overlay Agent`
-  - removes unsafe or overreaching content
-  - enforces a final conservative answer style
+* `Compliance Agent`
+
+  * customer compliance context
+  * compliance audit event creation
+
+* `Knowledge Agent`
+
+  * searches an in-memory banking documentation repository
+  * answers policy, FAQ, guidance, runbook, and procedural questions
+  * only uses RAG search results and does not access banking systems directly
+
+* `Omni Agent`
+
+  * routes a user request to one or more specialized agents
+  * combines their outputs
+  * passes the result through a safety overlay
+
+* `Overlay Agent`
+
+  * removes unsafe or overreaching content
+  * enforces a final conservative answer style
 
 ### Main responsibilities
 
-- expose business-facing AI chat endpoints
-- keep each agent domain-specific
-- prevent direct access to backend systems
-- normalize backend/API errors into safe explanations
-- maintain session-based conversational memory
-- support parallel multi-agent fan-out and synthesis
-- answer documentation-driven questions through the knowledge repository
+* expose business-facing AI chat endpoints
+* keep each agent domain-specific
+* prevent direct access to backend systems
+* normalize backend/API errors into safe explanations
+* maintain session-based conversational memory
+* support parallel multi-agent fan-out and synthesis
+* answer documentation-driven questions through the knowledge repository
+* expose AI-compatible adapter endpoints for APIM AI APIs
+* route A2A agent calls through APIM-managed AI APIs instead of direct in-process agent calls
 
 ---
 
-## 4. `banking-webhook-listener`
+## 4. `ai adapter capability inside banking_agent`
+
+This capability is implemented inside the Ballerina service and exposes OpenAI-compatible endpoints for APIM AI APIs.
+
+These endpoints currently follow this pattern:
+
+* `/v1/ai/retail/chat/completions`
+* `/v1/ai/payments/chat/completions`
+* `/v1/ai/risk/chat/completions`
+* `/v1/ai/compliance/chat/completions`
+* `/v1/ai/knowledge/chat/completions`
+* `/v1/ai/omni_a2a/chat/completions`
+
+### Main responsibilities
+
+* translate OpenAI-style requests into the existing `AgentRequest` format
+* translate `AgentResponse` into OpenAI-compatible `chat.completion` responses
+* preserve session routing through `X-Session-Id` and/or metadata
+* allow APIM AI APIs to place guardrails and AI governance on top of existing banking agents
+* ensure A2A orchestration can call governed AI APIs instead of directly invoking sub-agents
+
+### Why the adapter exists
+
+APIM AI APIs and AI guardrails operate most naturally on AI-style interfaces such as `/chat/completions`.
+
+The adapter allows the project to:
+
+* keep the existing business agent implementation
+* avoid rewriting all agent internals
+* expose each agent as an AI API
+* apply APIM AI governance and guardrails per agent
+* let omni A2A call those same governed AI APIs
+
+---
+
+## 5. `apim`
+
+This is the WSO2 API Manager layer and AI Gateway exposure point.
+
+It is responsible for exposing:
+
+* AI APIs for retail, payments, risk, compliance, knowledge, and omni_a2a adapters
+* REST or MCP-oriented APIs for MI-backed banking APIs when needed
+* centralized authentication, throttling, analytics, and governance
+
+### Main responsibilities
+
+* publish AI APIs backed by the Ballerina adapter endpoints
+* apply AI guardrails and policies
+* provide a single external entry point
+* prevent direct access to internal services
+* govern A2A communication by forcing sub-agent calls through managed APIs
+
+### Why APIM exists in this architecture
+
+This is the critical control plane for the demo.
+
+It enables the customer use cases around:
+
+* secure multi-vendor LLM access
+* AI API governance
+* MCP exposure
+* governed agent-to-agent communication
+
+It is also the correct place to apply:
+
+* authentication
+* throttling
+* analytics
+* AI guardrails
+* policy enforcement
+
+---
+
+## 6. `banking-webhook-listener`
 
 This is a lightweight webhook sink.
 
@@ -153,46 +241,48 @@ It receives and prints agent-to-agent handoff events.
 
 ### Main responsibilities
 
-- show when the omni agent hands work to specialized agents
-- provide visibility into orchestration
-- support auditability and demos of interception
+* show when the omni agent hands work to specialized agents
+* provide visibility into orchestration
+* support auditability and demos of interception
 
 ---
 
-## 5. In-memory RAG Repository
+## 7. In-memory RAG Repository
 
 This capability is implemented inside `banking_agent`.
 
 It stores banking knowledge documents in memory and supports:
 
-- seeded documentation at startup
-- list documents
-- upsert documents
-- reset to default seed
-- keyword-based search over title, category, source, tags, and body text
+* seeded documentation at startup
+* list documents
+* upsert documents
+* reset to default seed
+* keyword-based search over title, category, source, tags, and body text
 
 ### Main responsibilities
 
-- provide documentation-oriented retrieval for the Knowledge Agent
-- support policy and procedural Q&A without reaching backend transactional systems
-- give a simple local RAG experience for demos and extensions
+* provide documentation-oriented retrieval for the Knowledge Agent
+* support policy and procedural Q&A without reaching backend transactional systems
+* give a simple local RAG experience for demos and extensions
 
 ### Why the RAG repository exists
 
 Many banking conversations are not transactional. They are about:
 
-- internal guidance
-- customer support scripts
-- KYC and AML process summaries
-- card and payment policy explanations
-- operational wording for review states
-- support escalation language
+* internal guidance
+* customer support scripts
+* KYC and AML process summaries
+* card and payment policy explanations
+* operational wording for review states
+* support escalation language
 
 This repository gives the agent layer a place to retrieve that knowledge safely.
 
 ---
 
 # End-to-End Request Flow
+
+## Direct specialized or omni request flow
 
 A typical transactional or operational request flows like this:
 
@@ -209,6 +299,8 @@ A typical transactional or operational request flows like this:
 11. The overlay agent removes unsafe or advisory content.
 12. The final response is returned to the caller.
 
+## Knowledge-oriented request flow
+
 A knowledge-oriented request flows like this:
 
 1. A user calls `/v1/knowledge/chat` or `/v1/omni/chat`.
@@ -220,6 +312,8 @@ A knowledge-oriented request flows like this:
 7. If the omni agent is involved, the knowledge answer is merged with other domain answers.
 8. The overlay agent performs the final safety pass.
 
+## Async flow
+
 For async flows:
 
 1. The caller sends a request to an MI async resource.
@@ -227,6 +321,37 @@ For async flows:
 3. MI immediately returns a `202 QUEUED` acknowledgment.
 4. A scheduled message processor forwards the message later to the backend.
 5. MI emits processor lifecycle telemetry to the backend ops endpoint.
+
+## APIM AI API flow
+
+For AI-managed agent exposure:
+
+1. A caller invokes an APIM AI API.
+2. APIM authenticates and applies governance.
+3. APIM forwards the request to a Ballerina AI adapter endpoint.
+4. The adapter translates the OpenAI-style payload into `AgentRequest`.
+5. The corresponding banking agent executes normally.
+6. The adapter translates the result into an OpenAI-style completion response.
+7. APIM returns the AI response to the client.
+
+## Omni A2A flow through APIM
+
+This is the most important governed orchestration path in the project:
+
+1. A caller invokes `/v1/omni_a2a/chat` directly, or preferably the APIM-exposed omni A2A AI adapter/API.
+2. The Ballerina omni A2A orchestration detects which domains are needed.
+3. For each relevant domain, it does not call the sub-agent directly.
+4. Instead, it calls the APIM AI API of the target agent.
+5. APIM applies authentication, throttling, analytics, and AI guardrails.
+6. APIM forwards the request to the corresponding Ballerina AI adapter.
+7. The adapter invokes the correct underlying banking agent.
+8. The agent uses MI-backed tools as usual.
+9. The adapter returns an OpenAI-compatible response to APIM.
+10. APIM returns that governed response to omni A2A.
+11. Omni A2A synthesizes the results and passes them through the overlay agent.
+12. The final answer is returned.
+
+This is what proves that internal agent calls are being governed through exposed AI APIs and not executed as hidden direct calls.
 
 ---
 
@@ -240,7 +365,7 @@ banking-mi/
   WSO2 Micro Integrator artifacts, deployment config, Dockerfile
 
 banking_agent/
-  Ballerina agentic APIs, tools, orchestration, prompts, in-memory RAG store
+  Ballerina agentic APIs, tools, orchestration, prompts, in-memory RAG store, AI adapters
 
 banking-webhook-listener/
   Simple Python webhook sink for handoff events
@@ -250,7 +375,7 @@ docker-compose.yml
 
 openapi/
   API contracts and related specifications
-````
+```
 
 ---
 
@@ -261,6 +386,7 @@ openapi/
 The architecture propagates correlation IDs across:
 
 * caller
+* APIM
 * Ballerina agent layer
 * MI layer
 * backend
@@ -327,6 +453,25 @@ The knowledge path is intentionally separated from transactional tools:
 * documentation answers remain distinct from system-of-record answers
 * the omni layer can combine both safely
 
+## Adapter isolation
+
+The AI adapter layer is intentionally thin:
+
+* it does not contain banking business logic
+* it only translates protocol shapes
+* it reuses the existing business agents
+* it allows APIM AI APIs to treat each agent as an AI backend
+
+## Guardrail enforcement point
+
+The correct place for AI guardrails in this architecture is APIM, not inside the agent code.
+
+This preserves:
+
+* centralized governance
+* reusability of agent internals
+* consistent enforcement for both external callers and internal A2A flows
+
 ---
 
 # Running the Project
@@ -368,6 +513,14 @@ docker-compose down
 ## Webhook Listener
 
 * Base URL: `http://localhost:8099`
+
+## APIM Gateway
+
+* Base URL: `http://localhost:8280`
+
+## APIM Publisher / DevPortal / Carbon
+
+* `https://localhost:9443`
 
 ---
 
@@ -637,6 +790,31 @@ Example:
 
 This is where the omni agent is most useful.
 
+## 7. Governed AI adapter exposure
+
+A caller wants to access an agent as an AI API, with:
+
+* APIM authentication
+* APIM throttling
+* APIM AI guardrails
+* OpenAI-compatible request/response shape
+
+Example:
+
+* call the Retail AI adapter through APIM
+* apply guardrails on the Knowledge AI adapter
+* expose Compliance AI separately from Payments AI
+
+## 8. Governed A2A orchestration
+
+A caller wants to see agent-to-agent communication happen under API governance.
+
+Example:
+
+* invoke omni A2A
+* have it call Retail, Payments, Risk, Compliance, or Knowledge through APIM AI APIs
+* show interception logs, APIM access, and final synthesis
+
 ---
 
 # Component-by-Component Testing Cookbook
@@ -647,6 +825,7 @@ Set these variables first:
 export BACKEND=http://localhost:8080
 export MI=http://localhost:8290
 export AGENT=http://localhost:8293
+export APIM=http://localhost:8280
 export CID=test-corr-001
 ```
 
@@ -1703,7 +1882,370 @@ Expected:
 
 ---
 
-# 4. Handoff Webhook Validation
+# 4. AI Adapter Testing Cookbook
+
+These tests validate the OpenAI-compatible adapter layer before introducing APIM.
+
+## 4.1 Retail AI adapter direct
+
+```bash
+curl -i -X POST "$AGENT/v1/ai/retail/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: ai-retail-001" \
+  -d '{
+    "model":"banking-retail-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Explain customer CUST-BR-001, account ACC-CHK-BR-001, and card CARD-CR-BR-001."
+      }
+    ]
+  }'
+```
+
+## 4.2 Payments AI adapter direct
+
+```bash
+curl -i -X POST "$AGENT/v1/ai/payments/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: ai-payments-001" \
+  -d '{
+    "model":"banking-payments-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Check transfer TRF-20260315-0001."
+      }
+    ]
+  }'
+```
+
+## 4.3 Risk AI adapter direct
+
+```bash
+curl -i -X POST "$AGENT/v1/ai/risk/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: ai-risk-001" \
+  -d '{
+    "model":"banking-risk-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Explain whether card CARD-CR-BR-003 or transfer TRF-20260315-0001 is under review."
+      }
+    ]
+  }'
+```
+
+## 4.4 Compliance AI adapter direct
+
+```bash
+curl -i -X POST "$AGENT/v1/ai/compliance/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: ai-compliance-001" \
+  -d '{
+    "model":"banking-compliance-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Summarize customer CUST-BR-001 for compliance context."
+      }
+    ]
+  }'
+```
+
+## 4.5 Knowledge AI adapter direct
+
+```bash
+curl -i -X POST "$AGENT/v1/ai/knowledge/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: ai-knowledge-001" \
+  -d '{
+    "model":"banking-knowledge-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"What does policy say about PIX limits and review?"
+      }
+    ]
+  }'
+```
+
+## 4.6 Omni A2A AI adapter direct
+
+```bash
+curl -i -X POST "$AGENT/v1/ai/omni_a2a/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: ai-omni-a2a-001" \
+  -d '{
+    "model":"banking-omni-a2a-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Check customer CUST-BR-003, explain the card status, and tell me whether there is any transfer under review."
+      }
+    ]
+  }'
+```
+
+---
+
+# 5. APIM Testing Cookbook
+
+This section validates the fully governed AI architecture.
+
+## 5.1 What should be exposed through APIM
+
+At minimum, create APIM AI APIs for:
+
+* Retail AI Adapter
+* Payments AI Adapter
+* Risk AI Adapter
+* Compliance AI Adapter
+* Knowledge AI Adapter
+* Omni A2A AI Adapter
+
+Optionally, also expose:
+
+* MI unified APIs as REST APIs
+* MCP-oriented APIs for the MI tool surface
+
+## 5.2 Why these should be AI APIs instead of plain REST APIs
+
+The AI adapter endpoints should be published as AI APIs because that enables:
+
+* AI guardrails
+* AI-specific analytics
+* prompt/response governance
+* policy attachment at the AI layer
+* consistent treatment of agents as governed AI services
+
+---
+
+## 5.3 Example APIM AI API paths
+
+These are example external APIM gateway paths used in the demo:
+
+* `/bankingretailaiadapter/1.0.0/chat/completions`
+* `/bankingpaymentsaiadapter/1.0.0/chat/completions`
+* `/bankingriskaiadapter/1.0.0/chat/completions`
+* `/bankingcomplianceaiadapter/1.0.0/chat/completions`
+* `/bankingknowledgeaiadapter/1.0.0/chat/completions`
+* `/bankingomnia2aaiadapter/1.0.0/chat/completions`
+
+The exact path depends on how the API is published, but the gateway contract should be consistent with the OpenAI chat completions shape.
+
+---
+
+## 5.4 Retail AI API via APIM
+
+### Using API key
+
+```bash
+curl -i -X POST "$APIM/bankingretailaiadapter/1.0.0/chat/completions" \
+  -H "ApiKey: $APIKEY" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: apim-retail-ai-001" \
+  -d '{
+    "model":"banking-retail-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Explain customer CUST-BR-001, account ACC-CHK-BR-001, and card CARD-CR-BR-001."
+      }
+    ]
+  }'
+```
+
+### Using OAuth bearer token
+
+```bash
+curl -i -X POST "$APIM/bankingretailaiadapter/1.0.0/chat/completions" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: apim-retail-ai-002" \
+  -d '{
+    "model":"banking-retail-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Explain customer CUST-BR-001, account ACC-CHK-BR-001, and card CARD-CR-BR-001."
+      }
+    ]
+  }'
+```
+
+---
+
+## 5.5 Knowledge AI API via APIM
+
+### Using API key
+
+```bash
+curl -i -X POST "$APIM/bankingknowledgeaiadapter/1.0.0/chat/completions" \
+  -H "ApiKey: $APIKEY" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: apim-knowledge-ai-001" \
+  -d '{
+    "model":"banking-knowledge-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"What does policy say about PIX review and TED settlement timing?"
+      }
+    ]
+  }'
+```
+
+---
+
+## 5.6 Omni A2A AI API via APIM
+
+### Using API key
+
+```bash
+curl -i -X POST "$APIM/bankingomnia2aaiadapter/1.0.0/chat/completions" \
+  -H "ApiKey: $APIKEY" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: apim-omni-a2a-ai-001" \
+  -d '{
+    "model":"banking-omni-a2a-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Check customer CUST-BR-003, explain the card status, and tell me whether there is any transfer under review."
+      }
+    ]
+  }'
+```
+
+### Using OAuth bearer token
+
+```bash
+curl -i -X POST "$APIM/bankingomnia2aaiadapter/1.0.0/chat/completions" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: apim-omni-a2a-ai-002" \
+  -d '{
+    "model":"banking-omni-a2a-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Check customer CUST-BR-003, explain the card status, and tell me whether there is any transfer under review."
+      }
+    ]
+  }'
+```
+
+---
+
+## 5.7 APIM verification goals
+
+When these APIM tests succeed, you have proven:
+
+* AI APIs are exposed correctly
+* adapters are functioning
+* agents are reachable only through governed paths
+* APIM authentication is being enforced
+* A2A orchestration can be governed
+
+---
+
+# 6. A2A Validation Cookbook
+
+This section proves that the omni A2A orchestration is using APIM AI APIs for internal sub-agent calls.
+
+## 6.1 Direct omni A2A service test
+
+```bash
+curl -i -X POST "$AGENT/v1/omni_a2a/chat" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId":"demo-omni-a2a-001",
+    "message":"Check customer CUST-BR-003, explain the card status, and tell me whether there is any transfer under review."
+  }'
+```
+
+Expected behavior:
+
+* omni A2A detects domains
+* calls APIM AI APIs for relevant sub-agents
+* synthesizes the governed responses
+* returns final message after overlay
+
+## 6.2 Direct omni A2A adapter test
+
+```bash
+curl -i -X POST "$AGENT/v1/ai/omni_a2a/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: direct-omni-a2a-ai-001" \
+  -d '{
+    "model":"banking-omni-a2a-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Check customer CUST-BR-003, explain the card status, and tell me whether there is any transfer under review."
+      }
+    ]
+  }'
+```
+
+## 6.3 APIM omni A2A adapter test
+
+```bash
+curl -i -X POST "$APIM/bankingomnia2aaiadapter/1.0.0/chat/completions" \
+  -H "ApiKey: $APIKEY" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: governed-omni-a2a-ai-001" \
+  -d '{
+    "model":"banking-omni-a2a-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Check customer CUST-BR-003, explain the card status, and tell me whether there is any transfer under review."
+      }
+    ]
+  }'
+```
+
+## 6.4 How to verify sub-agent calls are not direct
+
+Watch these logs in parallel:
+
+```bash
+docker logs -f banking-agent
+```
+
+```bash
+docker logs -f apim
+```
+
+```bash
+docker logs -f banking-webhook-listener
+```
+
+You should observe:
+
+1. banking-agent logs handoff interception events
+2. APIM logs requests for Retail, Payments, Risk, or other AI APIs
+3. banking-agent receives responses back from APIM AI adapter calls
+
+If APIM logs show sub-agent adapter invocations during omni A2A execution, then the orchestration is governed through APIM and not directly calling the internal specialized endpoints.
+
+## 6.5 Strong enforcement recommendation
+
+To ensure sub-agents are not called directly from outside:
+
+* do not expose `banking-agent:8293` externally in production-style compose
+* expose only APIM externally
+* let `banking-agent` be reachable only on the Docker network
+* keep omni A2A configured with APIM adapter URLs and credentials
+
+This is the correct deployment boundary.
+
+---
+
+# 7. Handoff Webhook Validation
 
 Watch the webhook listener:
 
@@ -1723,6 +2265,18 @@ curl -i -X POST "$AGENT/v1/omni/chat" \
   }'
 ```
 
+Trigger omni A2A orchestration:
+
+```bash
+curl -i -X POST "$AGENT/v1/omni_a2a/chat" \
+  -H "Content-Type: application/json" \
+  -H "X-Correlation-Id: webhook-002" \
+  -d '{
+    "sessionId": "sess-webhook-002",
+    "message": "Check customer CUST-BR-003, explain card status, and summarize any transfer review state."
+  }'
+```
+
 Expected webhook events:
 
 * `AGENT_HANDOFF_INTERCEPTED`
@@ -1736,7 +2290,7 @@ You should see handoffs not only to Retail, Payments, Risk, or Compliance, but a
 
 ---
 
-# 5. Useful Log Commands
+# 8. Useful Log Commands
 
 ## Backend logs
 
@@ -1756,6 +2310,12 @@ docker logs -f banking-mi
 docker logs -f banking-agent
 ```
 
+## APIM logs
+
+```bash
+docker logs -f apim
+```
+
 ## Webhook logs
 
 ```bash
@@ -1764,12 +2324,13 @@ docker logs -f banking-webhook-listener
 
 ---
 
-# 6. Fast Smoke Test
+# 9. Fast Smoke Test
 
 ```bash
 export BACKEND=http://localhost:8080
 export MI=http://localhost:8290
 export AGENT=http://localhost:8293
+export APIM=http://localhost:8280
 
 curl -s "$BACKEND/admin/reset"
 echo
@@ -1817,6 +2378,56 @@ curl -i -X POST "$AGENT/v1/omni/chat" \
     "message": "Summarize customer CUST-BR-001, account ACC-CHK-BR-001, card CARD-CR-BR-001, payment PMT-PIX-20260315-0001, transfer TRF-20260315-0001, and what the knowledge base says about review communication."
   }'
 echo
+
+curl -i -X POST "$AGENT/v1/ai/retail/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: smoke-ai-retail" \
+  -d '{
+    "model":"banking-retail-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Explain customer CUST-BR-001."
+      }
+    ]
+  }'
+echo
+```
+
+If APIM is configured and APIs are published:
+
+```bash
+curl -i -X POST "$APIM/bankingretailaiadapter/1.0.0/chat/completions" \
+  -H "ApiKey: $APIKEY" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: smoke-apim-retail" \
+  -d '{
+    "model":"banking-retail-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Explain customer CUST-BR-001."
+      }
+    ]
+  }'
+echo
+```
+
+```bash
+curl -i -X POST "$APIM/bankingomnia2aaiadapter/1.0.0/chat/completions" \
+  -H "ApiKey: $APIKEY" \
+  -H "Content-Type: application/json" \
+  -H "X-Session-Id: smoke-apim-omni-a2a" \
+  -d '{
+    "model":"banking-omni-a2a-ai",
+    "messages":[
+      {
+        "role":"user",
+        "content":"Check customer CUST-BR-003, card status, and transfer review."
+      }
+    ]
+  }'
+echo
 ```
 
 ---
@@ -1842,6 +2453,53 @@ The Knowledge Agent is also constrained:
 * it only answers from retrieved repository hits
 * it does not access transactional banking systems
 * it does not turn operational guidance into evasion strategies
+
+The APIM layer should be treated as the governance boundary for AI guardrails.
+
+---
+
+# APIM and Guardrails Notes
+
+## Why adapters are exposed as AI APIs
+
+The AI adapters exist so that APIM can manage the banking agents as true AI APIs.
+
+This enables:
+
+* AI guardrails on each specialized agent
+* AI guardrails on omni A2A
+* per-agent analytics
+* per-agent authentication and throttling
+* standardized OpenAI-compatible access
+
+## Why omni A2A should also be exposed as an AI API
+
+If omni A2A is exposed as a plain REST API, then:
+
+* you lose AI-specific governance at its entry point
+* guardrails cannot be attached in the same AI-native way
+* the final orchestration entry is less consistent than the sub-agents
+
+If omni A2A is also exposed through an adapter as an AI API, then:
+
+* the caller-facing orchestration entry is governed
+* the internal sub-agent calls are also governed
+* the entire chain becomes AI-governed end to end
+
+## Recommended exposure model
+
+Externally expose only:
+
+* APIM
+* APIM AI APIs for Retail, Payments, Risk, Compliance, Knowledge, and Omni A2A
+* optionally MI REST or MCP surfaces if needed for the demo
+
+Do not externally expose:
+
+* direct Ballerina specialized endpoints
+* direct Ballerina AI adapter endpoints
+* direct MI internal endpoints unless explicitly required for demo lab work
+* backend
 
 ---
 
@@ -1877,20 +2535,3 @@ The RAG capability in this demo is intentionally simple and fully local.
 * explain support wording for blocked cards
 * summarize KYC/AML procedural guidance
 * combine live customer/payment data with repository knowledge in omni mode
-
----
-
-# Next Extensions
-
-Potential next improvements:
-
-* wire the MI layer behind WSO2 API Manager 4.6
-* expose the Banking Agents as a Custom AI Provider in API Manager
-* enforce OAuth2/JWT between callers and gateway
-* add richer OpenAPI contracts
-* replace in-memory RAG with a persistent or vector-backed store
-* connect the Knowledge Agent to governed documentation sources
-* add persistent message stores
-* add approval workflows for compliance event creation
-* add integration tests as scripts or CI jobs
-* add dashboards for correlation-based tracing

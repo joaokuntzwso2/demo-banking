@@ -1,0 +1,96 @@
+openapi: 3.0.3
+info:
+  title: Banking Omni A2A Agent API
+  version: 1.0.0
+  description: Omni orchestration endpoint that routes subagent calls through APIM-managed agent APIs.
+
+servers:
+  - url: http://banking-agent:8293
+
+paths:
+  /v1/omni_a2a/chat:
+    post:
+      operationId: omniA2AChat
+      summary: Invoke omni A2A agent
+      description: Returns a final answer after APIM-governed subagent calls and safety overlay.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRequest'
+            example:
+              sessionId: sess-omni-a2a-001
+              message: Check customer CUST-BR-003, explain the card status, and tell me whether there is any transfer under review.
+      responses:
+        '200':
+          description: Successful agent response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Agent execution failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+
+components:
+  schemas:
+    AgentRequest:
+      type: object
+      required: [sessionId, message]
+      properties:
+        sessionId:
+          type: string
+        message:
+          type: string
+
+    LlmUsage:
+      type: object
+      properties:
+        responseModel:
+          type: string
+        promptTokenCount:
+          type: integer
+        completionTokenCount:
+          type: integer
+        totalTokenCount:
+          type: integer
+        remainingTokenCount:
+          type: integer
+          nullable: true
+
+    AgentResponse:
+      type: object
+      required: [sessionId, agentName, promptVersion, message]
+      properties:
+        sessionId:
+          type: string
+        agentName:
+          type: string
+          example: BankingOmniAgent
+        promptVersion:
+          type: string
+          example: banking-omni-v1.0.0
+        message:
+          type: string
+        llm:
+          $ref: '#/components/schemas/LlmUsage'
+
+    ErrorBody:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        details:
+          type: string
+          nullable: true

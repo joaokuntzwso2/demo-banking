@@ -1,97 +1,63 @@
 openapi: 3.0.3
 info:
-  title: Banking Backend - Admin API
+  title: Banking Backend Admin API
   version: 1.0.0
-  description: Admin endpoints for resetting and inspecting the banking demo backend state.
+  description: Admin endpoints for resetting and inspecting backend demo state.
+
 servers:
-  - url: http://localhost:8080
+  - url: http://banking-backend:8080
 
 paths:
   /admin/reset:
     post:
       operationId: resetBackendState
-      summary: Reset in-memory backend state to seed data
+      summary: Reset backend state
       responses:
-        "200":
+        '200':
           description: State reset successfully
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
           content:
             application/json:
               schema:
                 type: object
-                additionalProperties: false
                 properties:
                   status:
                     type: string
-                    example: RESET
                   snapshot:
-                    $ref: "#/components/schemas/AdminSnapshot"
-                required: [status, snapshot]
+                    $ref: '#/components/schemas/AdminSnapshot'
 
   /admin/snapshot:
     get:
       operationId: getBackendSnapshot
-      summary: Get a summary snapshot of in-memory backend state
+      summary: Get backend state snapshot
       responses:
-        "200":
-          description: Snapshot summary
-          headers:
-            X-Correlation-Id:
-              $ref: "#/components/headers/XCorrelationId"
+        '200':
+          description: Snapshot returned
           content:
             application/json:
               schema:
                 type: object
-                additionalProperties: false
                 properties:
                   snapshot:
-                    $ref: "#/components/schemas/AdminSnapshot"
-                required: [snapshot]
+                    $ref: '#/components/schemas/AdminSnapshot'
 
 components:
-  headers:
-    XCorrelationId:
-      description: Correlation ID for tracing across services.
-      schema:
-        type: string
-
   schemas:
     AdminSnapshot:
       type: object
-      additionalProperties: false
       properties:
         customers:
           type: integer
-          minimum: 0
         accounts:
           type: integer
-          minimum: 0
         cards:
           type: integer
-          minimum: 0
         payments:
           type: integer
-          minimum: 0
         transfers:
           type: integer
-          minimum: 0
         complianceEvents:
           type: integer
-          minimum: 0
         fraudAlerts:
           type: integer
-          minimum: 0
         processorEvents:
           type: integer
-          minimum: 0
-      required:
-        - customers
-        - accounts
-        - cards
-        - payments
-        - transfers
-        - complianceEvents
-        - fraudAlerts
-        - processorEvents

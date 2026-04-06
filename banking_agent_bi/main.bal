@@ -461,7 +461,7 @@ ${materializeSubAgentAnswer("knowledgeAgent", knowledgeResult)}
 @http:ServiceConfig {
     cors: {
         allowOrigins: ["*"],
-        allowHeaders: ["content-type", "x-correlation-id"],
+        allowHeaders: ["content-type", "x-correlation-id", "x-session-id"],
         allowMethods: ["POST", "GET", "OPTIONS"]
     }
 }
@@ -540,6 +540,21 @@ service /v1 on httpListener {
             correlationId,
             "/v1/knowledge/chat"
         );
+    }
+    resource function post omni_a2a/chat(
+        @http:Payload AgentRequest req,
+        @http:Header {name: "X-Correlation-Id"} string? correlationIdHeader
+    ) returns http:Response {
+        string correlationId = getOrGenerateCorrelationId(correlationIdHeader);
+
+        if !ENABLE_GATEWAY_A2A_DEMO {
+            return buildErrorResponse(http:STATUS_NOT_IMPLEMENTED, {
+                message: "Gateway-routed A2A demo is disabled",
+                details: "Set ENABLE_GATEWAY_A2A_DEMO=true to enable this endpoint"
+            }, correlationId);
+        }
+
+        return handleOmniA2ARequest(req, correlationId);
     }
 
     resource function post omni/chat(
@@ -624,5 +639,120 @@ service /v1 on httpListener {
             totalDocuments: docs.length(),
             documents: docs
         }, correlationId);
+    }
+
+        // -------------------------------------------------------------------------
+    // OpenAI-compatible AI adapter endpoints for APIM AI APIs
+    // -------------------------------------------------------------------------
+
+    resource function post ai/retail/chat/completions(
+        @http:Payload json req,
+        @http:Header {name: "X-Correlation-Id"} string? correlationIdHeader,
+        @http:Header {name: "X-Session-Id"} string? sessionIdHeader
+    ) returns http:Response {
+        string correlationId = getOrGenerateCorrelationId(correlationIdHeader);
+        return handleAgentRequestOpenAiCompat(
+            retailAgent,
+            BANKING_RETAIL_AGENT_NAME,
+            BANKING_RETAIL_PROMPT_VERSION,
+            "banking-retail-ai",
+            req,
+            correlationId,
+            "/v1/ai/retail/chat/completions",
+            sessionIdHeader
+        );
+    }
+
+    resource function post ai/payments/chat/completions(
+        @http:Payload json req,
+        @http:Header {name: "X-Correlation-Id"} string? correlationIdHeader,
+        @http:Header {name: "X-Session-Id"} string? sessionIdHeader
+    ) returns http:Response {
+        string correlationId = getOrGenerateCorrelationId(correlationIdHeader);
+        return handleAgentRequestOpenAiCompat(
+            paymentsAgent,
+            BANKING_PAYMENTS_AGENT_NAME,
+            BANKING_PAYMENTS_PROMPT_VERSION,
+            "banking-payments-ai",
+            req,
+            correlationId,
+            "/v1/ai/payments/chat/completions",
+            sessionIdHeader
+        );
+    }
+
+    resource function post ai/risk/chat/completions(
+        @http:Payload json req,
+        @http:Header {name: "X-Correlation-Id"} string? correlationIdHeader,
+        @http:Header {name: "X-Session-Id"} string? sessionIdHeader
+    ) returns http:Response {
+        string correlationId = getOrGenerateCorrelationId(correlationIdHeader);
+        return handleAgentRequestOpenAiCompat(
+            riskAgent,
+            BANKING_RISK_AGENT_NAME,
+            BANKING_RISK_PROMPT_VERSION,
+            "banking-risk-ai",
+            req,
+            correlationId,
+            "/v1/ai/risk/chat/completions",
+            sessionIdHeader
+        );
+    }
+
+    resource function post ai/compliance/chat/completions(
+        @http:Payload json req,
+        @http:Header {name: "X-Correlation-Id"} string? correlationIdHeader,
+        @http:Header {name: "X-Session-Id"} string? sessionIdHeader
+    ) returns http:Response {
+        string correlationId = getOrGenerateCorrelationId(correlationIdHeader);
+        return handleAgentRequestOpenAiCompat(
+            complianceAgent,
+            BANKING_COMPLIANCE_AGENT_NAME,
+            BANKING_COMPLIANCE_PROMPT_VERSION,
+            "banking-compliance-ai",
+            req,
+            correlationId,
+            "/v1/ai/compliance/chat/completions",
+            sessionIdHeader
+        );
+    }
+
+    resource function post ai/omni_a2a/chat/completions(
+        @http:Payload json req,
+        @http:Header {name: "X-Correlation-Id"} string? correlationIdHeader,
+        @http:Header {name: "X-Session-Id"} string? sessionIdHeader
+    ) returns http:Response {
+        string correlationId = getOrGenerateCorrelationId(correlationIdHeader);
+
+        if !ENABLE_GATEWAY_A2A_DEMO {
+            return buildOpenAiCompletionErrorResponse(
+                http:STATUS_NOT_IMPLEMENTED,
+                "Gateway-routed A2A demo is disabled",
+                correlationId
+            );
+        }
+
+        return handleOmniA2ARequestOpenAiCompat(
+            req,
+            correlationId,
+            sessionIdHeader
+        );
+    }
+    resource function post ai/knowledge/chat/completions(
+        @http:Payload json req,
+        @http:Header {name: "X-Correlation-Id"} string? correlationIdHeader,
+        @http:Header {name: "X-Session-Id"} string? sessionIdHeader
+    ) returns http:Response {
+        string correlationId = getOrGenerateCorrelationId(correlationIdHeader);
+        return handleAgentRequestOpenAiCompat(
+            knowledgeAgent,
+            BANKING_KNOWLEDGE_AGENT_NAME,
+            BANKING_KNOWLEDGE_PROMPT_VERSION,
+            "banking-knowledge-ai",
+            req,
+            correlationId,
+            "/v1/ai/knowledge/chat/completions",
+            sessionIdHeader
+        );
     }
 }

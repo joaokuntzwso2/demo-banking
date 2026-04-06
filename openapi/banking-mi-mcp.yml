@@ -1,0 +1,127 @@
+openapi: 3.0.3
+info:
+  title: Banking MCP Tool Surface
+  version: 1.0.0
+  description: Curated MI-backed banking operations for exposure through APIM MCP Gateway.
+
+servers:
+  - url: http://banking-mi:8290
+
+paths:
+  /customers/1.0.0/profile/{customerId}:
+    get:
+      operationId: getCustomerProfile
+      summary: Get customer profile
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Customer profile returned
+
+  /accounts/1.0.0/balance/{accountId}:
+    get:
+      operationId: getAccountBalance
+      summary: Get account balance
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Account balance returned
+
+  /cards/1.0.0/status/{cardId}:
+    get:
+      operationId: getCardStatus
+      summary: Get card status
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Card status returned
+
+  /payments/1.0.0/pix/sync:
+    post:
+      operationId: submitPixPayment
+      summary: Submit PIX payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accountId, beneficiaryName, beneficiaryBank, amountBr]
+              properties:
+                accountId:
+                  type: string
+                beneficiaryName:
+                  type: string
+                beneficiaryBank:
+                  type: string
+                amountBr:
+                  type: number
+      responses:
+        '200':
+          description: PIX payment processed
+
+  /payments/1.0.0:
+    get:
+      operationId: getPaymentStatus
+      summary: Get payment status
+      parameters:
+        - name: paymentId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment status returned
+
+  /transfers/1.0.0:
+    get:
+      operationId: getTransferStatus
+      summary: Get transfer status
+      parameters:
+        - name: transferId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transfer status returned
+
+  /compliance/1.0.0/audit:
+    post:
+      operationId: createComplianceAuditEvent
+      summary: Create compliance audit event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eventType, severity, customerId, details]
+              properties:
+                eventType:
+                  type: string
+                severity:
+                  type: string
+                customerId:
+                  type: string
+                details:
+                  type: string
+      responses:
+        '200':
+          description: Compliance audit event recorded

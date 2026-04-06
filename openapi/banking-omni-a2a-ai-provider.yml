@@ -1,0 +1,187 @@
+openapi: 3.0.3
+info:
+  title: Banking Omni A2A AI Adapter
+  version: 1.0.0
+  description: >
+    OpenAI-compatible AI adapter for the Banking Omni A2A orchestration endpoint.
+    This adapter receives chat/completions requests, invokes the governed omni A2A
+    orchestration flow, and returns an OpenAI-compatible response for APIM AI Gateway.
+
+servers:
+  - url: http://banking-agent:8293/v1/ai/omni_a2a
+
+paths:
+  /chat/completions:
+    post:
+      operationId: omniA2AChatCompletions
+      summary: OpenAI-compatible chat completions for Banking Omni A2A Agent
+      description: >
+        Accepts an OpenAI-style chat/completions request, extracts the latest user message,
+        routes orchestration through the omni A2A flow, and returns an OpenAI-compatible
+        assistant response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenAiChatCompletionsRequest'
+            example:
+              model: banking-omni-a2a-ai
+              messages:
+                - role: user
+                  content: Check customer CUST-BR-003, explain the card status, and tell me whether there is any transfer under review.
+              metadata:
+                sessionId: demo-omni-a2a-ai-001
+      responses:
+        '200':
+          description: OpenAI-compatible completion response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenAiChatCompletionsResponse'
+        '400':
+          description: Invalid AI request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenAiErrorResponse'
+        '500':
+          description: Adapter or orchestration execution failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenAiErrorResponse'
+
+components:
+  schemas:
+    OpenAiChatMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          example: user
+        content:
+          type: string
+          example: Explain customer CUST-BR-001 and any transfer under review.
+
+    OpenAiChatCompletionsRequest:
+      type: object
+      required:
+        - messages
+      properties:
+        model:
+          type: string
+          nullable: true
+          example: banking-omni-a2a-ai
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpenAiChatMessage'
+        metadata:
+          type: object
+          additionalProperties: true
+          example:
+            sessionId: demo-omni-a2a-ai-001
+            correlationId: corr-demo-001
+
+    OpenAiChoiceMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          example: assistant
+        content:
+          type: string
+
+    OpenAiChoice:
+      type: object
+      required:
+        - index
+        - message
+        - finish_reason
+      properties:
+        index:
+          type: integer
+          example: 0
+        message:
+          $ref: '#/components/schemas/OpenAiChoiceMessage'
+        finish_reason:
+          type: string
+          example: stop
+
+    OpenAiUsage:
+      type: object
+      required:
+        - prompt_tokens
+        - completion_tokens
+        - total_tokens
+      properties:
+        prompt_tokens:
+          type: integer
+          example: 42
+        completion_tokens:
+          type: integer
+          example: 151
+        total_tokens:
+          type: integer
+          example: 193
+
+    OpenAiChatCompletionsResponse:
+      type: object
+      required:
+        - id
+        - object
+        - created
+        - model
+        - choices
+        - usage
+      properties:
+        id:
+          type: string
+          example: chatcmpl-corr-demo-001
+        object:
+          type: string
+          example: chat.completion
+        created:
+          type: integer
+          example: 0
+        model:
+          type: string
+          example: banking-omni-a2a-ai
+        choices:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpenAiChoice'
+        usage:
+          $ref: '#/components/schemas/OpenAiUsage'
+
+    OpenAiError:
+      type: object
+      required:
+        - message
+        - type
+        - code
+      properties:
+        message:
+          type: string
+          example: messages must contain at least one user message with non-empty string content
+        type:
+          type: string
+          example: invalid_request_error
+        code:
+          type: string
+          example: invalid_request
+
+    OpenAiErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          $ref: '#/components/schemas/OpenAiError'

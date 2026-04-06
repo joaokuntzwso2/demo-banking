@@ -1,14 +1,14 @@
 openapi: 3.0.3
 info:
-  title: Banking Knowledge AI Adapter
+  title: Banking Retail AI Adapter
   version: 1.0.0
 servers:
-  - url: http://banking-agent:8293/v1/ai/knowledge
+  - url: http://banking-agent:8293/v1/ai/retail
 paths:
   /chat/completions:
     post:
-      operationId: knowledgeChatCompletions
-      summary: OpenAI-compatible chat completions for Banking Knowledge Agent
+      operationId: retailChatCompletions
+      summary: OpenAI-compatible chat completions for Banking Retail Agent
       requestBody:
         required: true
         content:

@@ -1,14 +1,14 @@
 openapi: 3.0.3
 info:
-  title: Banking Knowledge AI Adapter
+  title: Banking Payments AI Adapter
   version: 1.0.0
 servers:
-  - url: http://banking-agent:8293/v1/ai/knowledge
+  - url: http://banking-agent:8293/v1/ai/payments
 paths:
   /chat/completions:
     post:
-      operationId: knowledgeChatCompletions
-      summary: OpenAI-compatible chat completions for Banking Knowledge Agent
+      operationId: paymentsChatCompletions
+      summary: OpenAI-compatible chat completions for Banking Payments Agent
       requestBody:
         required: true
         content:

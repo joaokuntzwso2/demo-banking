@@ -5,7 +5,15 @@ import ballerinax/ai;
 // -----------------------------------------------------------------------------
 
 public configurable string BACKEND_ACCESS_TOKEN = "";
-public configurable string OPENAI_API_KEY = ?;
+
+// Direct vendor access (fallback only)
+public configurable string OPENAI_API_KEY = "";
+
+// Preferred mode for demo: WSO2 AI Gateway
+public configurable boolean USE_WSO2_AI_GATEWAY_FOR_LLM = true;
+public configurable string AI_GATEWAY_LLM_SERVICE_URL = "";
+public configurable string AI_GATEWAY_LLM_ACCESS_TOKEN = "";
+
 public ai:OPEN_AI_MODEL_NAMES OPENAI_MODEL = ai:GPT_4O;
 public configurable int HTTP_LISTENER_PORT = 8293;
 public configurable string BACKEND_BASE_URL = ?;
@@ -37,3 +45,22 @@ public configurable boolean ENABLE_AGENT_HANDOFF_INTERCEPTOR = true;
 public configurable boolean ENABLE_AGENT_HANDOFF_VERBOSE_LOG = true;
 public configurable boolean ENABLE_AGENT_HANDOFF_WEBHOOK = true;
 public configurable string AGENT_HANDOFF_WEBHOOK_URL = "http://banking-webhook-listener:8099/handoff";
+
+// -----------------------------------------------------------------------------
+// A2A / gateway-routed subagent AI-API calls
+// -----------------------------------------------------------------------------
+
+public configurable boolean ENABLE_GATEWAY_A2A_DEMO = true;
+public configurable string AGENT_GATEWAY_BASE_URL = "";
+public configurable string AGENT_GATEWAY_ACCESS_TOKEN = "";
+
+// Supported values: "api_key" or "bearer"
+public configurable string AGENT_GATEWAY_AUTH_MODE = "api_key";
+public configurable string AGENT_GATEWAY_API_KEY_HEADER = "ApiKey";
+
+// These now point to APIM AI APIs, not REST APIs.
+public configurable string RETAIL_AGENT_GATEWAY_PATH = "/bankingretailaiadapter/1.0.0/chat/completions";
+public configurable string PAYMENTS_AGENT_GATEWAY_PATH = "/bankingpaymentsaiadapter/1.0.0/chat/completions";
+public configurable string RISK_AGENT_GATEWAY_PATH = "/bankingriskaiadapter/1.0.0/chat/completions";
+public configurable string COMPLIANCE_AGENT_GATEWAY_PATH = "/bankingcomplianceaiadapter/1.0.0/chat/completions";
+public configurable string KNOWLEDGE_AGENT_GATEWAY_PATH = "/bankingknowledgeaiadapter/1.0.0/chat/completions";
