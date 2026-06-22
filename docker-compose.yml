@@ -39,15 +39,16 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - BACKEND_BASE_URL=http://banking-mi:8290
       - HTTP_LISTENER_PORT=8293
+      - BANKING_AGENT_ID=${BANKING_AGENT_ID:-}
+      - BANKING_AGENT_SECRET=${BANKING_AGENT_SECRET:-}
+      - WSO2_IS_BASE_URL=${WSO2_IS_BASE_URL:-https://wso2is:9444}
     ports:
       - "8293:8293"
     depends_on:
       - wso2mi
       - apim
     volumes:
-      - ./banking_agent_bi/Config.toml:/home/ballerina/Config.toml:ro
       - ./banking_agent_bi/Config.toml:/workspace/Config.toml:ro
-      - ./banking_agent_bi/Config.toml:/home/ballerina/src/Config.toml:ro
 
   banking-webhook-listener:
     build: ./banking-webhook-listener
@@ -77,5 +78,52 @@ services:
       retries: 15
       start_period: 120s
 
+  wso2is:
+    image: wso2/wso2is:7.3.0
+    container_name: wso2is
+    ports:
+      - "9444:9444"
+    environment:
+      JAVA_OPTS: >
+        -Xms512m
+        -Xmx1536m
+        -XX:MaxMetaspaceSize=384m
+        -XX:+UseG1GC
+        -DportOffset=1
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9444 || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+      start_period: 120s
+
+  banking-ui:
+    build:
+      context: ./banking-demo-ui
+      dockerfile: Dockerfile
+      args:
+        VITE_IS_BASE_URL: ${VITE_IS_BASE_URL:-https://localhost:9444}
+        VITE_IS_CLIENT_ID: ${VITE_IS_CLIENT_ID:-REPLACE_WITH_WSO2_IS_SPA_CLIENT_ID}
+        VITE_REDIRECT_URL: ${VITE_REDIRECT_URL:-http://localhost:5173}
+        VITE_SIGN_OUT_REDIRECT_URL: ${VITE_SIGN_OUT_REDIRECT_URL:-http://localhost:5173}
+        VITE_APIM_BASE_URL: ${VITE_APIM_BASE_URL:-http://localhost:5173/gateway}
+        VITE_BANKING_MI_CONTEXT: ${VITE_BANKING_MI_CONTEXT:-}
+        VITE_AGENT_CONTRACT: ${VITE_AGENT_CONTRACT:-ai-adapter}
+        VITE_AGENT_CHAT_URL: ${VITE_AGENT_CHAT_URL:-http://localhost:5173/gateway/v1/ai/omni_a2a/chat/completions}
+        VITE_ENABLE_MOCK_AUTH: ${VITE_ENABLE_MOCK_AUTH:-false}
+        VITE_MOCK_SCOPES: ${VITE_MOCK_SCOPES:-}
+        VITE_AGENT_ID: ${VITE_AGENT_ID:-not-configured}
+        VITE_AGENT_NAME: ${VITE_AGENT_NAME:-Banking Omni Assistant Agent}
+        VITE_AGENT_PURPOSE: ${VITE_AGENT_PURPOSE:-Governed banking assistant with read-only default permissions.}
+    container_name: banking-ui
+    ports:
+      - "5173:80"
+    depends_on:
+      - apim
+      - wso2mi
+      - wso2is
+      - banking-agent
+
 volumes:
   apim_home:
+  is_home:
