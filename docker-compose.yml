@@ -42,14 +42,17 @@ services:
       - BANKING_AGENT_ID=${BANKING_AGENT_ID:-}
       - BANKING_AGENT_SECRET=${BANKING_AGENT_SECRET:-}
       - WSO2_IS_BASE_URL=${WSO2_IS_BASE_URL:-https://wso2is:9444}
-    ports:
-      - "8293:8293"
-    depends_on:
-      - wso2mi
-      - apim
-    volumes:
-      - ./banking_agent_bi/Config.toml:/workspace/Config.toml:ro
+      - AGENT_GATEWAY_BASE_URL=http://apim:8280
+      - AGENT_GATEWAY_AUTH_MODE=api_key
+      - AGENT_GATEWAY_API_KEY_HEADER=apikey
+      - AGENT_GATEWAY_ACCESS_TOKEN=${AGENT_GATEWAY_ACCESS_TOKEN:-}
 
+      - BAL_CONFIG_VAR_AGENT_GATEWAY_BASE_URL=http://apim:8280
+      - BAL_CONFIG_VAR_AGENT_GATEWAY_AUTH_MODE=api_key
+      - BAL_CONFIG_VAR_AGENT_GATEWAY_API_KEY_HEADER=apikey
+      - BAL_CONFIG_VAR_AGENT_GATEWAY_ACCESS_TOKEN=${AGENT_GATEWAY_ACCESS_TOKEN:-}
+      - BAL_CONFIG_VAR_ENABLE_OBO_AUTHORIZATION=true
+      - BAL_CONFIG_VAR_AGENT_ALLOWED_SCOPES=agent:chat banking:profile:read banking:accounts:read banking:cards:read banking:payments:read banking:transfers:create banking:transfers:read banking:compliance:write banking:fraud:write
   banking-webhook-listener:
     build: ./banking-webhook-listener
     container_name: banking-webhook-listener
@@ -79,7 +82,8 @@ services:
       start_period: 120s
 
   wso2is:
-    image: wso2/wso2is:7.3.0
+    build: ./wso2is-km
+    image: banking-wso2is-km:7.3.0
     container_name: wso2is
     ports:
       - "9444:9444"

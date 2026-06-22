@@ -25,7 +25,7 @@ const API_ACTIONS = [
     id: "profile",
     group: "Retail banking",
     title: "Customer profile",
-    product: "Identity Server → UI scope guard → Integrator → JS banking backend",
+    product: "Identity Server → UI scope guard → APIM → Integrator → JS banking backend",
     description: "Read KYC, risk rating, accounts and cards for a customer.",
     method: "GET",
     scope: REQUIRED_SCOPES.profileRead,
@@ -36,7 +36,7 @@ const API_ACTIONS = [
     id: "balance",
     group: "Retail banking",
     title: "Account balance",
-    product: "Identity Server → UI scope guard → Integrator → JS banking backend",
+    product: "Identity Server → UI scope guard → APIM → Integrator → JS banking backend",
     description: "Read current and available balance for an account.",
     method: "GET",
     scope: REQUIRED_SCOPES.accountsRead,
@@ -47,19 +47,19 @@ const API_ACTIONS = [
     id: "cardStatus",
     group: "Retail banking",
     title: "Card status",
-    product: "Identity Server → UI scope guard → Integrator → JS banking backend",
+    product: "Identity Server → UI scope guard → APIM → Integrator → JS banking backend",
     description: "Read the status and limits of a card.",
     method: "GET",
     scope: REQUIRED_SCOPES.cardsRead,
-    fields: [{ name: "cardId", label: "Card ID", defaultValue: "CARD-BR-001" }],
+    fields: [{ name: "cardId", label: "Card ID", defaultValue: "CARD-CR-BR-001" }],
     path: ({ cardId }) => `/cards/1.0.0/status/${encodeURIComponent(cardId)}`
   },
   {
     id: "pixSync",
     group: "Payments",
     title: "Create PIX payment",
-    product: "Identity Server scope guard + Integrator mediation",
-    description: "Initiate a synchronous PIX payment. This should be unavailable without payment creation permission.",
+    product: "Identity Server user scope guard + APIM + Integrator mediation",
+    description: "Initiate a synchronous PIX payment. Direct UI/API invocation requires payment creation permission.",
     method: "POST",
     scope: REQUIRED_SCOPES.paymentsCreate,
     fields: [
@@ -81,7 +81,7 @@ const API_ACTIONS = [
     id: "paymentStatus",
     group: "Payments",
     title: "Payment status",
-    product: "Identity Server → UI scope guard → Integrator → JS banking backend",
+    product: "Identity Server → UI scope guard → APIM → Integrator → JS banking backend",
     description: "Read the status of a PIX payment by identifier.",
     method: "GET",
     scope: REQUIRED_SCOPES.paymentsRead,
@@ -92,7 +92,7 @@ const API_ACTIONS = [
     id: "tedAsync",
     group: "Transfers",
     title: "Create TED transfer",
-    product: "Identity Server scope guard + Integrator async mediation",
+    product: "Identity Server user scope guard + APIM + Integrator async mediation",
     description: "Initiate an asynchronous TED transfer through the integration layer.",
     method: "POST",
     scope: REQUIRED_SCOPES.transfersCreate,
@@ -113,18 +113,18 @@ const API_ACTIONS = [
     id: "transferStatus",
     group: "Transfers",
     title: "Transfer status",
-    product: "Identity Server → UI scope guard → Integrator → JS banking backend",
+    product: "Identity Server → UI scope guard → APIM → Integrator → JS banking backend",
     description: "Read the status of an asynchronous TED transfer.",
     method: "GET",
     scope: REQUIRED_SCOPES.transfersRead,
-    fields: [{ name: "transferId", label: "Transfer ID", defaultValue: "TED-000001" }],
+    fields: [{ name: "transferId", label: "Transfer ID", defaultValue: "TRF-20260315-0001" }],
     path: ({ transferId }) => `/transfers/1.0.0?transferId=${encodeURIComponent(transferId)}`
   },
   {
     id: "audit",
     group: "Risk and compliance",
     title: "Create audit event",
-    product: "Identity Server → UI scope guard → Integrator → compliance service",
+    product: "Identity Server → UI scope guard → APIM → Integrator → compliance service",
     description: "Write a compliance audit event. Useful to show a compliance-only permission.",
     method: "POST",
     scope: REQUIRED_SCOPES.complianceWrite,
@@ -141,7 +141,7 @@ const API_ACTIONS = [
     id: "fraudAlert",
     group: "Risk and compliance",
     title: "Create fraud alert",
-    product: "Identity Server → UI scope guard → Integrator → fraud service",
+    product: "Identity Server → UI scope guard → APIM → Integrator → fraud service",
     description: "Create a fraud alert. Useful to show risk-team permissions separate from payments.",
     method: "POST",
     scope: REQUIRED_SCOPES.fraudWrite,
@@ -157,12 +157,17 @@ const API_ACTIONS = [
 ];
 
 const QUICK_AGENT_PROMPTS = [
-  "Summarize the current customer profile for CUST-BR-001 and highlight risk signals.",
-  "Can this customer safely make a PIX payment of 320 BRL today? Use available tools only if permitted.",
-  "Explain which banking API permissions my current session has and which actions are blocked.",
-  "Create an audit-ready explanation of the last payment decision with correlation IDs."
+  "Explain customer CUST-BR-001, account ACC-CHK-BR-001, and card CARD-CR-BR-001.",
+  "Check transfer TRF-20260315-0001 and tell me whether it is under review or requires attention.",
+  "Create a PIX payment of 320 BRL from ACC-CHK-BR-001 to merchant@pix.example for Mercado Sao Bento. Explain the OBO authorization decision.",
+  "Run a full banking review for customer CUST-BR-001, account ACC-CHK-BR-001, card CARD-CR-BR-001, and transfer TRF-20260315-0001. Route the request to every relevant specialist agent and summarize by domain."
 ];
 
+/*
+ * These policies are no longer used to block agent prompts in the browser.
+ * They are used only to enrich OBO metadata sent to the agent, so the server-side
+ * agent can explain or enforce user+agent authorization.
+ */
 const SENSITIVE_AGENT_POLICIES = [
   {
     id: "pix-create",
@@ -241,7 +246,7 @@ function renderBoot() {
     <main class="boot-screen">
       <div class="pulse-mark">WSO2</div>
       <h1>Banking Identity Demo</h1>
-      <p>Preparing the Integrator, Identity Server 7.3 and banking agent demo console…</p>
+      <p>Preparing the Integrator, Identity Server 7.3 and OBO banking agent demo console…</p>
     </main>
   `;
 }
@@ -262,7 +267,7 @@ function render() {
           <span class="brand-mark">WSO2</span>
           <div>
             <strong>Banking Identity Demo</strong>
-            <small>Integrator · Identity Server 7.3 · Governed Agent</small>
+            <small>Integrator · APIM · Identity Server 7.3 · OBO Agent</small>
           </div>
         </div>
         <div class="nav-actions">
@@ -274,10 +279,11 @@ function render() {
       <section class="hero-grid">
         <div>
           <p class="eyebrow">Principal Solutions Architect demo path</p>
-          <h1>Identity-gated banking APIs and agentic banking assistance</h1>
+          <h1>Identity-gated APIs and On-Behalf-Of banking agent authorization</h1>
           <p class="lede">
-            The interface only invokes APIs with an authenticated access token and only enables actions when the token contains the required scope.
-            The banking agent appears only after login and only when the user has <code>${REQUIRED_SCOPES.agentChat}</code>.
+            Direct API cards remain guarded by the signed-in user's token scopes.
+            The banking agent requires <code>${REQUIRED_SCOPES.agentChat}</code> to start,
+            then sends OBO context so server-side policy can evaluate both the user identity and the agent identity.
           </p>
           <div class="hero-actions">
             <a href="#api-console" class="secondary-link">Open API console</a>
@@ -305,7 +311,7 @@ function render() {
       <section id="api-console" class="panel">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Integrator APIs</p>
+            <p class="eyebrow">Integrator APIs through APIM</p>
             <h2>Permission-aware API console</h2>
           </div>
           <span class="status-pill">${API_ACTIONS.length} APIs</span>
@@ -327,7 +333,7 @@ function render() {
       <section class="panel agent-section" id="agent-section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Agent permissions</p>
+            <p class="eyebrow">OBO agent authorization</p>
             <h2>Banking omni assistant</h2>
           </div>
           <span class="status-pill ${canUseAgent() ? "ok" : "locked"}">${canUseAgent() ? "Available" : "Locked"}</span>
@@ -357,6 +363,7 @@ function renderSessionCard() {
       <div class="session-row"><span>Agent ID</span><strong>${escapeHtml(abbreviate(CONFIG.agent.id || "not-configured", 24))}</strong></div>
       <div class="session-row"><span>Agent OAuth Client</span><strong>${escapeHtml(abbreviate(CONFIG.agent.oauthClientId || "not-configured", 24))}</strong></div>
       <div class="session-row"><span>Agent contract</span><strong>${escapeHtml(CONFIG.agent.contract)}</strong></div>
+      <div class="session-row"><span>Authorization model</span><strong>OBO: user + agent</strong></div>
     </aside>
   `;
 }
@@ -384,7 +391,7 @@ function renderIdentityDetails() {
       </div>
       <div class="claim-card">
         <span>Actor / delegated agent</span>
-        <strong>${escapeHtml(readActorSubject(state.tokenClaims) || "No delegated actor claim in this token")}</strong>
+        <strong>${escapeHtml(readActorSubject(state.tokenClaims) || "No delegated actor claim in this browser token")}</strong>
       </div>
       <div class="claim-card">
         <span>Token scopes</span>
@@ -397,7 +404,7 @@ function renderIdentityDetails() {
     </div>
 
     <div class="chip-block">
-      <h3>Scopes available to this session</h3>
+      <h3>Scopes available to this user session</h3>
       <div class="chips">${renderChips(state.scopes, "No scopes were found in the access token.")}</div>
     </div>
 
@@ -445,7 +452,7 @@ function renderApiCard(action) {
 
       <p>${escapeHtml(action.description)}</p>
       <div class="product-line">${escapeHtml(action.product)}</div>
-      <div class="required-scope"><span>Required scope</span><code>${escapeHtml(action.scope)}</code></div>
+      <div class="required-scope"><span>Required user scope</span><code>${escapeHtml(action.scope)}</code></div>
 
       <form class="action-form" data-form-for="${action.id}">
         ${action.fields.map((field) => renderField(action, field)).join("")}
@@ -479,7 +486,7 @@ function renderResult() {
     return `
       <div class="empty-state compact">
         <h3>No request yet</h3>
-        <p>Invoke a permitted API to see the authorization header path, correlation ID, status and payload.</p>
+        <p>Invoke a permitted direct API to see the authorization header path, correlation ID, status and payload.</p>
       </div>
     `;
   }
@@ -508,7 +515,11 @@ function renderAgentGate() {
 
   return `
     <div class="agent-ready">
-      <p>The floating banking assistant is available in the lower-right corner. It sends the user access token, agent identity headers and correlation headers.</p>
+      <p>
+        The floating banking assistant is available in the lower-right corner.
+        The browser only checks <code>${REQUIRED_SCOPES.agentChat}</code>.
+        Sensitive banking actions are sent to the agent so server-side OBO policy can evaluate both the user and the agent identity.
+      </p>
       <div class="prompt-grid">
         ${QUICK_AGENT_PROMPTS.map((prompt) => `<button class="prompt-chip" data-agent-prompt="${escapeAttr(prompt)}">${escapeHtml(prompt)}</button>`).join("")}
       </div>
@@ -544,7 +555,10 @@ async function handleLogin() {
     const token = createMockJwt(CONFIG.demo.mockScopes);
 
     state.authenticated = true;
-    state.user = { username: "mock.banking.user@example.com", displayName: "Mock Banking User" };
+    state.user = {
+      username: "mock.banking.user@example.com",
+      displayName: "Mock Banking User"
+    };
     state.accessToken = token;
     state.tokenClaims = decodeJwt(token);
     state.scopes = collectScopes(state.tokenClaims);
@@ -607,6 +621,12 @@ async function invokeAction(actionId) {
   if (!action) return;
 
   try {
+    /*
+     * Direct API cards intentionally remain user-scope guarded.
+     * This demonstrates the difference between:
+     *   1. direct user API authorization, and
+     *   2. agent-mediated OBO authorization.
+     */
     requireScope(action.scope);
 
     const values = readFormValues(action);
@@ -623,7 +643,8 @@ async function invokeAction(actionId) {
       action: action.title,
       method: action.method,
       url,
-      requiredScope: action.scope,
+      authorizationModel: "direct_user_token",
+      requiredUserScope: action.scope,
       correlationId,
       elapsedMs,
       status: response.status,
@@ -634,13 +655,14 @@ async function invokeAction(actionId) {
 
     state.error = response.ok
       ? null
-      : `API returned ${response.status}. Check the direct MI endpoint, backend route, and token scopes.`;
+      : `API returned ${response.status}. Check the APIM API, MI endpoint, backend route, and token scopes.`;
   } catch (error) {
     state.error = error.message || String(error);
     state.lastResult = {
       action: action.title,
-      blockedBy: "frontend scope guard or network failure",
-      requiredScope: action.scope,
+      blockedBy: "frontend direct API scope guard or network failure",
+      authorizationModel: "direct_user_token",
+      requiredUserScope: action.scope,
       error: state.error
     };
   }
@@ -728,7 +750,7 @@ function renderAgentWidget() {
         <header>
           <div>
             <strong>${escapeHtml(CONFIG.agent.name || "Banking Omni Assistant")}</strong>
-            <small>Governed by Identity Server user and agent permissions</small>
+            <small>OBO: user permission + agent permission</small>
           </div>
           <button class="icon-button" id="closeAgent" aria-label="Close agent">×</button>
         </header>
@@ -736,7 +758,7 @@ function renderAgentWidget() {
         <div class="agent-messages" id="agentMessages"></div>
 
         <form id="agentForm" class="agent-form">
-          <textarea id="agentInput" rows="2" placeholder="Ask about customer, payment, risk or compliance…"></textarea>
+          <textarea id="agentInput" rows="2" placeholder="Ask about customer, payment, risk, compliance, or OBO authorization…"></textarea>
           <button type="submit">Send</button>
         </form>
       </section>
@@ -795,14 +817,27 @@ async function sendAgentMessage(message) {
   let userMessageAdded = false;
 
   try {
+    /*
+     * OBO demo behavior:
+     * The browser only checks whether the user can invoke the agent.
+     * It does NOT block PIX/TED/audit/fraud prompts locally.
+     *
+     * The sensitive operation must reach the server-side agent so the demo can show:
+     *   - Ana has agent:chat but lacks banking:payments:create → OBO deny
+     *   - Bruno has agent:chat and banking:payments:create → OBO allow
+     *   - the agent identity must also have the required permission
+     */
     requireScope(REQUIRED_SCOPES.agentChat);
 
     state.chatMessages.push({ role: "user", content: message });
     userMessageAdded = true;
 
-    enforceAgentPromptPolicy(message);
+    state.chatMessages.push({
+      role: "assistant",
+      content: "Evaluating the request with On-Behalf-Of user + agent authorization…",
+      pending: true
+    });
 
-    state.chatMessages.push({ role: "assistant", content: "Thinking through permitted banking tools…", pending: true });
     refreshAgentMessages();
 
     const reply = await callAgent(message);
@@ -842,20 +877,51 @@ async function sendAgentMessage(message) {
 
 async function callAgent(message) {
   const correlationId = `agent-ui-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const requestedOperations = detectSensitiveAgentOperations(message);
 
   const context = {
     session_id: state.sessionId,
+    correlation_id: correlationId,
+
+    /*
+     * Compatibility fields for existing agent code/logging.
+     */
     subject: state.tokenClaims.sub,
     actor: readActorSubject(state.tokenClaims) || CONFIG.agent.id,
+    scopes: state.scopes,
+    roles: state.roles,
+
+    /*
+     * Explicit OBO metadata for the demo.
+     */
+    authorization_model: "obo_user_and_agent",
+    obo: {
+      mode: "user_and_agent",
+      enforcement: "server_side_agent_policy",
+      rule: "effective_permission = user_permission AND agent_permission",
+      user: {
+        subject: state.tokenClaims.sub || null,
+        username: state.user?.username || state.user?.displayName || null,
+        scopes: state.scopes,
+        roles: state.roles
+      },
+      agent: {
+        id: CONFIG.agent.id,
+        oauth_client_id: CONFIG.agent.oauthClientId,
+        name: CONFIG.agent.name,
+        purpose: CONFIG.agent.purpose,
+        required_role: "BankingOmniAgent"
+      },
+      requested_operations: requestedOperations,
+      requested_scopes: requestedOperations.map((operation) => operation.scope)
+    },
+
     agent: {
       id: CONFIG.agent.id,
       oauth_client_id: CONFIG.agent.oauthClientId,
       name: CONFIG.agent.name,
       purpose: CONFIG.agent.purpose
-    },
-    scopes: state.scopes,
-    roles: state.roles,
-    correlation_id: correlationId
+    }
   };
 
   const requestPayload = buildAgentPayload(message, context);
@@ -871,6 +937,7 @@ async function callAgent(message) {
       "X-Agent-Domain": "retail-banking-demo",
       "X-Agent-Tool": "banking-omni-chat",
       "X-Agent-Intercepted": "true",
+      "X-Authorization-Model": "obo_user_and_agent",
       "X-Correlation-Id": correlationId,
       "x-fapi-interaction-id": correlationId
     },
@@ -890,12 +957,10 @@ function buildAgentPayload(message, context) {
       /*
        * Direct Ballerina banking agent contract.
        *
-       * IMPORTANT:
        * The /v1/omni/chat request record is strict and rejects unknown fields.
-       * Do not include `context` here, otherwise Ballerina returns:
-       * "data binding failed: undefined field 'context'".
+       * Do not include `context` here unless the backend record supports it.
        *
-       * Agent identity is still propagated through HTTP headers in callAgent().
+       * OBO metadata is propagated through HTTP headers for this contract.
        */
       return {
         sessionId: state.sessionId,
@@ -916,15 +981,25 @@ function buildAgentPayload(message, context) {
     case "ai-adapter":
     default:
       /*
-       * APIM AI Gateway / OpenAI-compatible style contract.
-       * Use this only when the APIM AI API is actually exposed.
+       * APIM AI Gateway / OpenAI-compatible contract.
        */
       return {
-        model: "banking-omni-a2a",
+        model: "banking-omni-a2a-ai",
         messages: [
           {
             role: "system",
-            content: "You are the governed WSO2 banking demo assistant. Use only APIs and tools permitted by the access token scopes. Explain blocked operations clearly."
+            content: [
+              "You are the governed WSO2 banking demo assistant.",
+              "This demo uses On-Behalf-Of authorization.",
+              "A sensitive banking operation is allowed only when BOTH the signed-in user and the agent identity have the required permission.",
+              "Do not rely only on the agent identity for write operations.",
+              "For PIX creation, require banking:payments:create from the user and from the agent.",
+              "For TED creation, require banking:transfers:create from the user and from the agent.",
+              "For compliance/audit creation, require banking:compliance:write from the user and from the agent.",
+              "For fraud alert creation, require banking:fraud:write from the user and from the agent.",
+              "If either side lacks the required permission, explain that OBO authorization denied the action and confirm that no operation was executed.",
+              "When an operation is allowed, explain that it passed OBO because both the user and the agent identity were authorized."
+            ].join(" ")
           },
           ...state.chatMessages
             .filter((entry) => !entry.pending && !entry.error)
@@ -964,8 +1039,8 @@ function refreshAgentMessages() {
   if (state.chatMessages.length === 0) {
     messages.innerHTML = `
       <div class="agent-empty">
-        <strong>Try a governed request</strong>
-        <p>Ask for a customer summary, a payment risk explanation, or a permission check.</p>
+        <strong>Try an OBO request</strong>
+        <p>Ask for a customer summary, transfer review, or PIX creation decision. Ana should be denied for PIX creation; Bruno should be allowed.</p>
       </div>
     `;
     return;
@@ -998,18 +1073,15 @@ function requireScope(scope) {
   }
 }
 
-function enforceAgentPromptPolicy(message) {
-  const matchedPolicy = SENSITIVE_AGENT_POLICIES.find((policy) => policy.pattern.test(message));
-
-  if (!matchedPolicy) {
-    return;
-  }
-
-  if (!hasScope(matchedPolicy.scope)) {
-    throw new Error(
-      `This agent request appears to ask the agent to ${matchedPolicy.label}, but the current user token is missing ${matchedPolicy.scope}.`
-    );
-  }
+function detectSensitiveAgentOperations(message) {
+  return SENSITIVE_AGENT_POLICIES
+    .filter((policy) => policy.pattern.test(message))
+    .map((policy) => ({
+      id: policy.id,
+      label: policy.label,
+      scope: policy.scope,
+      user_has_scope: hasScope(policy.scope)
+    }));
 }
 
 function hasScope(scope) {

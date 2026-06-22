@@ -20,6 +20,7 @@ Config.toml
 !Config.toml.example
 
 # General secrets / certs / keys
+wso2is-km/
 *.jks
 *.p12
 *.pfx

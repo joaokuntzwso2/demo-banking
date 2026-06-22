@@ -64,3 +64,17 @@ public configurable string PAYMENTS_AGENT_GATEWAY_PATH = "/bankingpaymentsaiadap
 public configurable string RISK_AGENT_GATEWAY_PATH = "/bankingriskaiadapter/1.0.0/chat/completions";
 public configurable string COMPLIANCE_AGENT_GATEWAY_PATH = "/bankingcomplianceaiadapter/1.0.0/chat/completions";
 public configurable string KNOWLEDGE_AGENT_GATEWAY_PATH = "/bankingknowledgeaiadapter/1.0.0/chat/completions";
+
+// -----------------------------------------------------------------------------
+// OBO authorization demo
+// -----------------------------------------------------------------------------
+
+public configurable boolean ENABLE_OBO_AUTHORIZATION = true;
+
+// Space-separated scopes assigned to the Banking Omni Agent identity in WSO2 IS.
+// For demo purposes this is the server-side representation of the agent identity scopes.
+public configurable string AGENT_ALLOWED_SCOPES = "agent:chat";
+public const string SCOPE_PAYMENTS_CREATE = "banking:payments:create";
+public const string SCOPE_TRANSFERS_CREATE = "banking:transfers:create";
+public const string SCOPE_COMPLIANCE_WRITE = "banking:compliance:write";
+public const string SCOPE_FRAUD_WRITE = "banking:fraud:write";
