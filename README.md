@@ -3,20 +3,21 @@
 This repository is a complete local demo for a modern banking architecture using:
 
 - **WSO2 Identity Server 7.3** for user authentication, roles, permissions, API-resource authorization, and AI agent identity.
+- **WSO2 API Manager** for API governance, AI API exposure, OAuth/API-key validation, subscriptions, throttling, and gateway routing.
 - **WSO2 Micro Integrator** for banking API mediation and controlled backend integration.
-- **WSO2 API Manager** for optional API and AI API governance.
-- **A Ballerina banking agent layer** for retail, payments, risk, compliance, knowledge/RAG, omni orchestration, and AI adapter endpoints.
+- **A Ballerina banking agent layer** for retail, payments, risk, compliance, knowledge/RAG, omni orchestration, and OpenAI-compatible AI adapter endpoints.
 - **A JavaScript mock banking backend** for customers, accounts, cards, PIX payments, TED transfers, compliance events, fraud alerts, and telemetry.
-- **A browser-based banking demo UI** for Identity Server login, permission-aware API invocation, and governed agent chat.
+- **A browser-based banking demo UI** for Identity Server login, permission-aware API invocation, APIM-routed calls, and governed agent chat.
 
 The demo is designed to show the difference between:
 
 1. **User permissions**: what the authenticated human user can do.
 2. **Agent permissions**: whether the banking assistant can appear and what actions it may attempt.
-3. **Integration mediation**: how banking APIs flow through WSO2 Micro Integrator.
-4. **Optional APIM governance**: how the same APIs and AI APIs can later be published and governed through WSO2 API Manager.
+3. **OBO-style delegated control**: a sensitive operation should pass only when the user and the agent are both allowed.
+4. **Integration mediation**: how banking APIs flow through WSO2 Micro Integrator.
+5. **APIM governance**: how REST banking APIs and AI adapter APIs are published and routed through WSO2 API Manager.
 
-> Current default demo mode: the UI authenticates users with WSO2 Identity Server, then calls WSO2 Micro Integrator and the Ballerina banking agent directly through the UI Nginx proxy. APIM runs in the stack, but the UI does not require APIM APIs to be published unless you explicitly switch to APIM mode.
+> Current APIM demo mode: the browser logs in with WSO2 Identity Server, sends the user bearer token to APIM through the UI Nginx `/gateway/` proxy, calls the MI-backed banking API through APIM, and calls the Omni banking agent through APIM. The Omni agent then calls managed sub-agent AI APIs through APIM using a server-side API key.
 
 ---
 
@@ -27,54 +28,61 @@ The demo is designed to show the difference between:
 | Component | Folder / Service | Default URL | Purpose |
 |---|---|---:|---|
 | Banking UI | `banking-demo-ui` / `banking-ui` | `http://localhost:5173` | Browser UI for login, scoped API access, and agent chat |
-| WSO2 Identity Server | `wso2is` | `https://localhost:9444/console` | Users, roles, scopes/permissions, SPA app, agent identity |
-| WSO2 API Manager | `apim` | `https://localhost:9443` | Optional API and AI API governance |
+| WSO2 Identity Server | `wso2is` | `https://localhost:9444/console` | Users, roles, scopes/permissions, SPA app, and AI agent identity |
+| WSO2 API Manager | `apim` | `https://localhost:9443` | API and AI API governance |
 | WSO2 Micro Integrator | `banking-mi` / `wso2mi` | `http://localhost:8290` | Canonical banking APIs and mediation |
 | Banking Agent | `banking_agent_bi` / `banking-agent` | `http://localhost:8293` | Ballerina agentic APIs and AI adapters |
 | Mock Backend | `banking-backend-js` / `banking-backend` | `http://localhost:8080` | Mock core banking system |
 | Webhook Listener | `banking-webhook-listener` | `http://localhost:8099` | Agent handoff event sink |
 
-### Demo flow in the current local mode
+### APIM-governed demo flow
 
 ```text
 Browser UI
   ↓ login
 WSO2 Identity Server 7.3
-  ↓ access token with scopes
+  ↓ user access token with scopes
 Browser UI
-  ↓ permission-aware banking API calls
-UI Nginx proxy /mi/*
+  ↓ Authorization: Bearer <user token>
+UI Nginx proxy /gateway/*
   ↓
-WSO2 Micro Integrator
+WSO2 API Manager Gateway
+  ↓ OAuth validation against WSO2 IS
+MI-backed Banking API
   ↓
-Mock banking backend
-
-Browser UI
-  ↓ agent chat if user has agent:chat
-UI Nginx proxy /agent/*
-  ↓
-Ballerina Banking Agent
-  ↓ tools
 WSO2 Micro Integrator
   ↓
 Mock banking backend
 ```
-
-### Optional APIM-governed mode
 
 ```text
-Browser or external client
+Browser UI
+  ↓ Authorization: Bearer <user token>, agent metadata headers
+UI Nginx proxy /gateway/bankingagent/1.0.0/chat/completions
   ↓
-WSO2 API Manager
-  ↓ auth, throttling, analytics, guardrails
-AI adapter endpoints in banking-agent
+WSO2 API Manager Gateway
+  ↓ OAuth validation: agent:chat
+Ballerina Omni AI Adapter
+  ↓ server-side APIM API key
+APIM sub-agent AI APIs
   ↓
-Specialized banking agents
+Retail / Payments / Risk / Compliance / Knowledge agents
   ↓ tools
 WSO2 Micro Integrator
   ↓
 Mock banking backend
 ```
+
+### Direct local fallback mode
+
+The repository can still run without APIM-published APIs:
+
+```text
+Browser UI /mi/*     → WSO2 Micro Integrator
+Browser UI /agent/*  → Ballerina Banking Agent
+```
+
+Use the direct mode only for local troubleshooting. Use APIM mode for the full demo.
 
 ---
 
@@ -94,13 +102,13 @@ banking-webhook-listener/
   Simple webhook sink for handoff/interception events
 
 banking-demo-ui/
-  Browser-based Identity Server + banking API + agent demo UI
+  Browser-based Identity Server + APIM + banking API + agent demo UI
 
 docker-compose.yml
   Local orchestration for the complete environment
 
 .env
-  Local Docker Compose and frontend build configuration
+  Local Docker Compose and frontend build configuration; do not commit this file
 
 openapi/
   API contracts and related specifications, if present
@@ -130,7 +138,7 @@ The WSO2 containers can take several minutes to become ready on first startup.
 
 ---
 
-## 4. Required Local Files
+## 4. Required Local Files and Security Rules
 
 ### 4.1 Root `.env`
 
@@ -147,31 +155,31 @@ demo-banking/
 └── banking-webhook-listener/
 ```
 
-Example root `.env`:
+### 4.2 APIM demo `.env`
+
+Use this when APIM is publishing the MI API and the Omni AI API:
 
 ```env
 # Optional OpenAI key for the Ballerina banking agent.
 OPENAI_API_KEY=
 
 # WSO2 Identity Server SPA configuration.
-# Replace VITE_IS_CLIENT_ID after creating the Banking Demo UI SPA app in IS.
 VITE_IS_BASE_URL=https://localhost:9444
 VITE_IS_CLIENT_ID=REPLACE_WITH_WSO2_IS_SPA_CLIENT_ID
 VITE_REDIRECT_URL=http://localhost:5173
 VITE_SIGN_OUT_REDIRECT_URL=http://localhost:5173
 
-# Current local demo mode:
-# The UI calls MI directly through its Nginx proxy.
-VITE_APIM_BASE_URL=http://localhost:5173/mi
-VITE_BANKING_MI_CONTEXT=
+# APIM gateway through UI Nginx proxy.
+VITE_APIM_BASE_URL=http://localhost:5173/gateway
 
-# Current local demo mode:
-# The UI calls the Ballerina banking agent directly through its Nginx proxy.
-VITE_AGENT_CONTRACT=banking-agent
-VITE_AGENT_CHAT_URL=http://localhost:5173/agent/v1/omni/chat
+# MI API published in APIM as context /bankingmi, version 1.0.0.
+VITE_BANKING_MI_CONTEXT=/bankingmi/1.0.0
+
+# Omni agent published in APIM as an AI/OpenAI-compatible API.
+VITE_AGENT_CONTRACT=ai-adapter
+VITE_AGENT_CHAT_URL=http://localhost:5173/gateway/bankingagent/1.0.0/chat/completions
 
 # WSO2 IS AI agent identity.
-# Fill these after creating the Interactive Agent in WSO2 IS.
 BANKING_AGENT_ID=
 BANKING_AGENT_SECRET=
 BANKING_AGENT_OAUTH_CLIENT_ID=
@@ -182,7 +190,16 @@ WSO2_IS_BASE_URL=https://wso2is:9444
 VITE_AGENT_ID=
 VITE_AGENT_OAUTH_CLIENT_ID=
 VITE_AGENT_NAME=Banking Omni Assistant Agent
-VITE_AGENT_PURPOSE=Interactive governed banking assistant with read-only default permissions and delegated sensitive actions.
+VITE_AGENT_PURPOSE=Interactive governed banking assistant with delegated sensitive actions.
+
+# Server-side APIM API key for Omni → managed sub-agent AI APIs.
+# Generate this in APIM DevPortal from the application subscribed to sub-agent AI APIs.
+AGENT_GATEWAY_ACCESS_TOKEN=
+
+# Optional local OBO pre-check demo.
+# This is a local mirror/config shim, not dynamic IS-backed OBO.
+ENABLE_OBO_AUTHORIZATION=true
+AGENT_ALLOWED_SCOPES=agent:chat banking:profile:read banking:accounts:read banking:cards:read banking:payments:create banking:payments:read banking:transfers:create banking:transfers:read banking:compliance:write banking:fraud:write
 
 # Optional UI-only rehearsal mode.
 VITE_ENABLE_MOCK_AUTH=false
@@ -194,6 +211,19 @@ Important:
 - `VITE_*` values are embedded during the Vite UI build.
 - After changing any `VITE_*` value, rebuild `banking-ui`.
 - Never create `VITE_AGENT_SECRET`.
+- Never commit `.env`.
+- Never commit generated API keys, access tokens, cert private keys, truststores, or local WSO2 runtime folders.
+
+### 4.3 Direct local fallback `.env`
+
+Use this only when bypassing APIM for local troubleshooting:
+
+```env
+VITE_APIM_BASE_URL=http://localhost:5173/mi
+VITE_BANKING_MI_CONTEXT=
+VITE_AGENT_CONTRACT=banking-agent
+VITE_AGENT_CHAT_URL=http://localhost:5173/agent/v1/omni/chat
+```
 
 ---
 
@@ -202,14 +232,12 @@ Important:
 Your `docker-compose.yml` should include these services:
 
 - `banking-backend`
-- `wso2mi`
+- `wso2mi` or `banking-mi`
 - `banking-agent`
 - `banking-webhook-listener`
 - `apim`
 - `wso2is`
 - `banking-ui`
-
-The important new parts are `wso2is` and `banking-ui`.
 
 ### 5.1 Identity Server service
 
@@ -248,10 +276,10 @@ Use port offset so IS runs externally on `9444` and does not collide with APIM o
         VITE_IS_CLIENT_ID: ${VITE_IS_CLIENT_ID:-REPLACE_WITH_WSO2_IS_SPA_CLIENT_ID}
         VITE_REDIRECT_URL: ${VITE_REDIRECT_URL:-http://localhost:5173}
         VITE_SIGN_OUT_REDIRECT_URL: ${VITE_SIGN_OUT_REDIRECT_URL:-http://localhost:5173}
-        VITE_APIM_BASE_URL: ${VITE_APIM_BASE_URL:-http://localhost:5173/mi}
-        VITE_BANKING_MI_CONTEXT: ${VITE_BANKING_MI_CONTEXT:-}
-        VITE_AGENT_CONTRACT: ${VITE_AGENT_CONTRACT:-banking-agent}
-        VITE_AGENT_CHAT_URL: ${VITE_AGENT_CHAT_URL:-http://localhost:5173/agent/v1/omni/chat}
+        VITE_APIM_BASE_URL: ${VITE_APIM_BASE_URL:-http://localhost:5173/gateway}
+        VITE_BANKING_MI_CONTEXT: ${VITE_BANKING_MI_CONTEXT:-/bankingmi/1.0.0}
+        VITE_AGENT_CONTRACT: ${VITE_AGENT_CONTRACT:-ai-adapter}
+        VITE_AGENT_CHAT_URL: ${VITE_AGENT_CHAT_URL:-http://localhost:5173/gateway/bankingagent/1.0.0/chat/completions}
         VITE_AGENT_ID: ${VITE_AGENT_ID:-not-configured}
         VITE_AGENT_OAUTH_CLIENT_ID: ${VITE_AGENT_OAUTH_CLIENT_ID:-not-configured}
         VITE_AGENT_NAME: ${VITE_AGENT_NAME:-Banking Omni Assistant Agent}
@@ -265,9 +293,12 @@ Use port offset so IS runs externally on `9444` and does not collide with APIM o
       - wso2is
       - wso2mi
       - banking-agent
+      - apim
 ```
 
-### 5.3 Banking agent environment
+### 5.3 Banking agent environment for APIM-routed A2A
+
+Ballerina configurable variables should be passed with `BAL_CONFIG_VAR_...`.
 
 ```yaml
   banking-agent:
@@ -277,10 +308,27 @@ Use port offset so IS runs externally on `9444` and does not collide with APIM o
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - BACKEND_BASE_URL=http://banking-mi:8290
       - HTTP_LISTENER_PORT=8293
+
       - BANKING_AGENT_ID=${BANKING_AGENT_ID:-}
       - BANKING_AGENT_SECRET=${BANKING_AGENT_SECRET:-}
       - BANKING_AGENT_OAUTH_CLIENT_ID=${BANKING_AGENT_OAUTH_CLIENT_ID:-}
       - WSO2_IS_BASE_URL=${WSO2_IS_BASE_URL:-https://wso2is:9444}
+
+      # APIM-routed managed sub-agent AI APIs.
+      - BAL_CONFIG_VAR_ENABLE_GATEWAY_A2A_DEMO=true
+      - BAL_CONFIG_VAR_AGENT_GATEWAY_BASE_URL=http://apim:8280
+      - BAL_CONFIG_VAR_AGENT_GATEWAY_AUTH_MODE=api_key
+      - BAL_CONFIG_VAR_AGENT_GATEWAY_API_KEY_HEADER=apikey
+      - BAL_CONFIG_VAR_AGENT_GATEWAY_ACCESS_TOKEN=${AGENT_GATEWAY_ACCESS_TOKEN:-}
+
+      # Optional local OBO pre-check demo.
+      # This mirrors agent scopes locally and is not dynamic IS-backed OBO.
+      - BAL_CONFIG_VAR_ENABLE_OBO_AUTHORIZATION=${ENABLE_OBO_AUTHORIZATION:-true}
+      - BAL_CONFIG_VAR_AGENT_ALLOWED_SCOPES=${AGENT_ALLOWED_SCOPES:-agent:chat}
+
+      # Timeout safety.
+      - BAL_CONFIG_VAR_BACKEND_HTTP_TIMEOUT_SECONDS=${BACKEND_HTTP_TIMEOUT_SECONDS:-15}
+      - BAL_CONFIG_VAR_BACKEND_HTTP_MAX_RETRIES=${BACKEND_HTTP_MAX_RETRIES:-1}
     ports:
       - "8293:8293"
     depends_on:
@@ -288,101 +336,24 @@ Use port offset so IS runs externally on `9444` and does not collide with APIM o
       - apim
 ```
 
-If you mount `Config.toml`, prefer one simple mount:
+Important APIM API-key detail:
 
-```yaml
-    volumes:
-      - ./banking_agent_bi/Config.toml:/workspace/Config.toml:ro
+```text
+Use header name: apikey
+Do not use: Internal-Key
 ```
 
-If Docker complains about mounting a file onto a directory, remove the volume and rebuild the image with `Config.toml` already present in the build context.
+A direct APIM call using `Internal-Key` returned `401 invalid_token` in this setup. The working sub-agent calls used:
+
+```text
+apikey: <generated APIM API key>
+```
 
 ---
 
-## 6. Banking UI Files
+## 6. Banking UI Nginx Proxy
 
-The `banking-demo-ui` folder should look like this:
-
-```text
-banking-demo-ui/
-├── Dockerfile
-├── README.md
-├── index.html
-├── nginx.conf
-├── package.json
-└── src
-    ├── config.js
-    ├── main.js
-    └── styles.css
-```
-
-### 6.1 UI Dockerfile
-
-The UI is built with Node and served by Nginx.
-
-```dockerfile
-FROM node:20-alpine AS build
-
-WORKDIR /app
-
-COPY package*.json ./
-
-RUN if [ -f package-lock.json ]; then \
-      npm ci --no-audit; \
-    else \
-      npm install --no-audit; \
-    fi
-
-COPY . .
-
-ARG VITE_IS_BASE_URL=https://localhost:9444
-ARG VITE_IS_CLIENT_ID=REPLACE_WITH_WSO2_IS_SPA_CLIENT_ID
-ARG VITE_REDIRECT_URL=http://localhost:5173
-ARG VITE_SIGN_OUT_REDIRECT_URL=http://localhost:5173
-ARG VITE_APIM_BASE_URL=http://localhost:5173/mi
-ARG VITE_BANKING_MI_CONTEXT=
-ARG VITE_AGENT_CONTRACT=banking-agent
-ARG VITE_AGENT_CHAT_URL=http://localhost:5173/agent/v1/omni/chat
-ARG VITE_AGENT_ID=not-configured
-ARG VITE_AGENT_OAUTH_CLIENT_ID=not-configured
-ARG VITE_AGENT_NAME=Banking Omni Assistant Agent
-ARG VITE_AGENT_PURPOSE=Interactive governed banking assistant.
-ARG VITE_ENABLE_MOCK_AUTH=false
-ARG VITE_MOCK_SCOPES=
-
-ENV VITE_IS_BASE_URL=$VITE_IS_BASE_URL
-ENV VITE_IS_CLIENT_ID=$VITE_IS_CLIENT_ID
-ENV VITE_REDIRECT_URL=$VITE_REDIRECT_URL
-ENV VITE_SIGN_OUT_REDIRECT_URL=$VITE_SIGN_OUT_REDIRECT_URL
-ENV VITE_APIM_BASE_URL=$VITE_APIM_BASE_URL
-ENV VITE_BANKING_MI_CONTEXT=$VITE_BANKING_MI_CONTEXT
-ENV VITE_AGENT_CONTRACT=$VITE_AGENT_CONTRACT
-ENV VITE_AGENT_CHAT_URL=$VITE_AGENT_CHAT_URL
-ENV VITE_AGENT_ID=$VITE_AGENT_ID
-ENV VITE_AGENT_OAUTH_CLIENT_ID=$VITE_AGENT_OAUTH_CLIENT_ID
-ENV VITE_AGENT_NAME=$VITE_AGENT_NAME
-ENV VITE_AGENT_PURPOSE=$VITE_AGENT_PURPOSE
-ENV VITE_ENABLE_MOCK_AUTH=$VITE_ENABLE_MOCK_AUTH
-ENV VITE_MOCK_SCOPES=$VITE_MOCK_SCOPES
-
-RUN npm run build
-
-FROM nginx:1.27-alpine
-
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
-
-EXPOSE 80
-
-HEALTHCHECK --interval=20s --timeout=5s --retries=10 \
-  CMD wget -qO- http://localhost/ >/dev/null || exit 1
-
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-### 6.2 UI Nginx proxy
-
-Current direct mode:
+For APIM mode, keep `/mi/` and `/agent/` as local fallbacks, but add `/gateway/` for APIM.
 
 ```nginx
 server {
@@ -396,15 +367,38 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    location /gateway/ {
+        proxy_pass http://apim:8280/;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header Authorization $http_authorization;
+        proxy_set_header Accept $http_accept;
+        proxy_set_header Content-Type $http_content_type;
+
+        proxy_set_header X-Correlation-Id $http_x_correlation_id;
+        proxy_set_header x-fapi-interaction-id $http_x_fapi_interaction_id;
+
+        proxy_set_header X-Agent-Id $http_x_agent_id;
+        proxy_set_header X-Agent-Name $http_x_agent_name;
+        proxy_set_header X-Agent-OAuth-Client-Id $http_x_agent_oauth_client_id;
+        proxy_set_header X-WSO2-Agent-Id $http_x_wso2_agent_id;
+        proxy_set_header X-WSO2-Agent-Name $http_x_wso2_agent_name;
+        proxy_set_header X-Agent-Domain $http_x_agent_domain;
+        proxy_set_header X-Agent-Tool $http_x_agent_tool;
+        proxy_set_header X-Agent-Intercepted $http_x_agent_intercepted;
+        proxy_set_header X-Authorization-Model $http_x_authorization_model;
+
+        proxy_buffering off;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 60s;
+    }
+
     location /mi/ {
         proxy_pass http://banking-mi:8290/;
         proxy_http_version 1.1;
 
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
         proxy_set_header Authorization $http_authorization;
         proxy_set_header X-Correlation-Id $http_x_correlation_id;
         proxy_set_header x-fapi-interaction-id $http_x_fapi_interaction_id;
@@ -419,10 +413,6 @@ server {
         proxy_http_version 1.1;
 
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
         proxy_set_header Authorization $http_authorization;
         proxy_set_header X-Correlation-Id $http_x_correlation_id;
         proxy_set_header x-fapi-interaction-id $http_x_fapi_interaction_id;
@@ -435,75 +425,32 @@ server {
         proxy_set_header X-Agent-Domain $http_x_agent_domain;
         proxy_set_header X-Agent-Tool $http_x_agent_tool;
         proxy_set_header X-Agent-Intercepted $http_x_agent_intercepted;
+        proxy_set_header X-Authorization-Model $http_x_authorization_model;
 
         proxy_buffering off;
         proxy_read_timeout 300s;
         proxy_connect_timeout 60s;
     }
-
-    location /backend/ {
-        proxy_pass http://banking-backend:8080/;
-        proxy_http_version 1.1;
-
-        proxy_set_header Host $host;
-        proxy_set_header X-Correlation-Id $http_x_correlation_id;
-        proxy_set_header x-fapi-interaction-id $http_x_fapi_interaction_id;
-    }
 }
 ```
 
-### 6.3 `.dockerignore`
+After changing `nginx.conf` or `VITE_*` values:
 
-Do not exclude `Dockerfile` or `nginx.conf`.
-
-```gitignore
-node_modules
-dist
-.env
-npm-debug.log
+```bash
+docker compose build banking-ui --no-cache
+docker compose up -d banking-ui
 ```
 
 ---
 
 ## 7. Start from Scratch
 
-### 7.1 Clone and enter the repo
-
 ```bash
 git clone https://github.com/joaokuntzwso2/demo-banking
 cd demo-banking
 ```
 
-### 7.2 Add the banking UI folder
-
-Ensure the folder exists:
-
-```bash
-ls -la banking-demo-ui
-```
-
-Expected:
-
-```text
-Dockerfile
-README.md
-index.html
-nginx.conf
-package.json
-src/
-```
-
-### 7.3 Create root `.env`
-
-```bash
-touch .env
-```
-
-Paste the `.env` from section 4.1.
-
-### 7.4 Build and start
-
-Detached mode is recommended because some Docker Compose versions can panic in attached monitor mode.
+Create `.env`, then:
 
 ```bash
 docker compose build --no-cache
@@ -511,7 +458,7 @@ docker compose up -d
 docker compose ps
 ```
 
-### 7.5 Open the consoles
+Open:
 
 ```text
 Banking UI:
@@ -642,7 +589,7 @@ Authorize:
 Banking Demo API
 ```
 
-Select all permissions/scopes:
+Select all permissions/scopes needed by the demo:
 
 ```text
 banking:profile:read
@@ -670,163 +617,15 @@ email
 
 Create roles as **Application roles** for the `Banking Demo UI` application.
 
-#### `BankingRetailViewer`
-
-Permissions:
-
-```text
-banking:profile:read
-banking:accounts:read
-banking:cards:read
-```
-
-#### `BankingPaymentsOperator`
-
-Permissions:
-
-```text
-banking:payments:create
-banking:payments:read
-banking:transfers:create
-banking:transfers:read
-```
-
-#### `BankingComplianceAnalyst`
-
-Permissions:
-
-```text
-banking:compliance:write
-banking:fraud:write
-```
-
-#### `BankingAgentUser`
-
-Permissions:
-
-```text
-agent:chat
-```
-
-#### `BankingAdmin`
-
-Permissions:
-
-```text
-banking:profile:read
-banking:accounts:read
-banking:cards:read
-banking:payments:create
-banking:payments:read
-banking:transfers:create
-banking:transfers:read
-banking:compliance:write
-banking:fraud:write
-agent:chat
-banking:admin
-```
+| Role | Permissions |
+|---|---|
+| `BankingRetailViewer` | `banking:profile:read`, `banking:accounts:read`, `banking:cards:read` |
+| `BankingPaymentsOperator` | `banking:payments:create`, `banking:payments:read`, `banking:transfers:create`, `banking:transfers:read` |
+| `BankingComplianceAnalyst` | `banking:compliance:write`, `banking:fraud:write` |
+| `BankingAgentUser` | `agent:chat` |
+| `BankingAdmin` | all banking scopes plus `agent:chat` and `banking:admin` |
 
 ### 8.5 Create users
-
-Create exactly these demo users.
-
-#### Ana
-
-```text
-Username: ana
-Password: Ana@12345
-First name: Ana
-Last name: Retail
-Email: ana@banking.demo
-```
-
-Assign roles:
-
-```text
-BankingRetailViewer
-BankingAgentUser
-```
-
-Expected:
-
-```text
-Ana can view profile, balance, card status, and use the agent.
-Ana cannot create PIX, TED, compliance events, or fraud alerts.
-```
-
-#### Bruno
-
-```text
-Username: bruno
-Password: Bruno@12345
-First name: Bruno
-Last name: Payments
-Email: bruno@banking.demo
-```
-
-Assign roles:
-
-```text
-BankingRetailViewer
-BankingPaymentsOperator
-BankingAgentUser
-```
-
-Expected:
-
-```text
-Bruno can view retail data, create/read PIX payments, create/read TED transfers, and use the agent.
-Bruno cannot create compliance or fraud records.
-```
-
-#### Clara
-
-```text
-Username: clara
-Password: Clara@12345
-First name: Clara
-Last name: Compliance
-Email: clara@banking.demo
-```
-
-Assign roles:
-
-```text
-BankingRetailViewer
-BankingComplianceAnalyst
-```
-
-Expected:
-
-```text
-Clara can view retail data and create compliance/fraud records.
-Clara cannot create payments or transfers.
-Clara does not see the agent because she does not have BankingAgentUser.
-```
-
-#### Bank admin
-
-```text
-Username: bankadmin
-Password: Admin@12345
-First name: Banking
-Last name: Admin
-Email: bankadmin@banking.demo
-```
-
-Assign role:
-
-```text
-BankingAdmin
-```
-
-Expected:
-
-```text
-Bankadmin can access all UI API cards and the agent.
-```
-
-### 8.6 User/permission matrix
 
 | User | Password | Roles | Demo behavior |
 |---|---|---|---|
@@ -835,13 +634,11 @@ Bankadmin can access all UI API cards and the agent.
 | `clara` | `Clara@12345` | `BankingRetailViewer`, `BankingComplianceAnalyst` | Retail + compliance/fraud, no agent |
 | `bankadmin` | `Admin@12345` | `BankingAdmin` | Everything |
 
-After changing roles or permissions, always log out and log in again because tokens are issued at login time.
+After changing roles or permissions, always log out and log in again because scopes are issued at login time.
 
 ---
 
 ## 9. Create the AI Agent Identity in WSO2 IS
-
-This demo uses a real WSO2 IS AI agent identity in addition to human users.
 
 ### 9.1 Create an Interactive Agent
 
@@ -861,7 +658,7 @@ Name:
 Banking Omni Assistant Agent
 
 Description:
-Interactive conversational banking assistant for WSO2 demo scenarios. It helps authenticated banking users inspect accounts, cards, payments, transfers, compliance events, and fraud signals. Access is governed by WSO2 Identity Server user permissions and agent permissions.
+Interactive conversational banking assistant for WSO2 demo scenarios. It helps authenticated banking users inspect accounts, cards, payments, transfers, compliance events, and fraud signals.
 
 Callback URL:
 http://localhost:5173/agent/callback
@@ -893,7 +690,7 @@ Do not expose the secret:
 Never create VITE_AGENT_SECRET.
 ```
 
-### 9.2 Create an agent role
+### 9.2 Create and assign an agent role
 
 Create a role:
 
@@ -901,7 +698,7 @@ Create a role:
 BankingOmniAgent
 ```
 
-Recommended permissions:
+Recommended read/default permissions:
 
 ```text
 agent:chat
@@ -912,19 +709,14 @@ banking:payments:read
 banking:transfers:read
 ```
 
-Do not give the agent direct write permissions by default:
+For write-operation demos, add/remove permissions deliberately:
 
 ```text
 banking:payments:create
 banking:transfers:create
 banking:compliance:write
 banking:fraud:write
-banking:admin
 ```
-
-This keeps the agent read-only by default. Sensitive actions must depend on the human user's permissions and, in production, backend/APIM enforcement.
-
-### 9.3 Assign the agent role
 
 Assign:
 
@@ -932,83 +724,549 @@ Assign:
 BankingOmniAgent → Banking Omni Assistant Agent
 ```
 
-### 9.4 Rebuild UI after adding agent metadata
+### 9.3 OBO note for this local demo
+
+The current local code can demonstrate OBO-style decisions, but the temporary `AGENT_ALLOWED_SCOPES` variable is only a local mirror of agent permissions. It is not dynamic IS-backed OBO.
+
+For production-grade OBO, the agent should request a delegated token from IS at runtime and call APIs with that delegated bearer token. Do not present a local static scope mirror as dynamic authorization.
+
+---
+
+## 10. Configure APIM to Trust WSO2 IS as Key Manager
+
+APIM must validate user tokens issued by WSO2 IS.
+
+Open:
+
+```text
+https://localhost:9443/admin
+```
+
+Go to:
+
+```text
+Key Managers → Add Key Manager
+```
+
+Suggested configuration:
+
+```text
+Name:
+WSO2-IS
+
+Type:
+WSO2 Identity Server 7
+
+Issuer:
+https://localhost:9444/oauth2/token
+```
+
+For Docker local demo, prefer internal HTTP endpoints to avoid local truststore/certificate issues:
+
+```text
+Client Registration Endpoint:
+http://wso2is:9764/api/identity/oauth2/dcr/v1.1/register
+
+Introspection Endpoint:
+http://wso2is:9764/oauth2/introspect
+
+Token Endpoint:
+http://wso2is:9764/oauth2/token
+
+Display Token Endpoint:
+https://localhost:9444/oauth2/token
+
+Revoke Endpoint:
+http://wso2is:9764/oauth2/revoke
+
+Display Revoke Endpoint:
+https://localhost:9444/oauth2/revoke
+
+UserInfo Endpoint:
+http://wso2is:9764/scim2/Me
+
+Authorize Endpoint:
+https://localhost:9444/oauth2/authorize
+
+Scope Management Endpoint:
+http://wso2is:9764/api/identity/oauth2/v1.0/scopes
+
+JWKS Endpoint:
+http://wso2is:9764/oauth2/jwks
+
+API Resources Endpoint:
+http://wso2is:9764/api/server/v1/api-resources
+
+Roles Endpoint:
+http://wso2is:9764/scim2/v2/Roles
+```
+
+Use admin credentials for management endpoints:
+
+```text
+Username: admin
+Password: admin
+```
+
+### 10.1 Certificate/truststore option if you use HTTPS container endpoints
+
+The internal HTTP configuration above is the simplest local demo path. If you configure APIM to call IS over internal HTTPS, import the IS certificate into APIM's client truststore.
+
+Create a local folder for generated cert material:
+
+```bash
+mkdir -p wso2is-km/certs
+```
+
+Export the IS certificate:
+
+```bash
+docker exec wso2is sh -lc '
+keytool -exportcert \
+  -alias wso2carbon \
+  -keystore "$CARBON_HOME/repository/resources/security/wso2carbon.p12" \
+  -storetype PKCS12 \
+  -storepass wso2carbon \
+  -file /tmp/wso2is.crt \
+  -rfc
+'
+
+docker cp wso2is:/tmp/wso2is.crt wso2is-km/certs/wso2is.crt
+```
+
+Import it into APIM:
+
+```bash
+docker cp wso2is-km/certs/wso2is.crt apim:/tmp/wso2is.crt
+
+docker exec apim sh -lc '
+keytool -importcert \
+  -noprompt \
+  -alias wso2is-local \
+  -file /tmp/wso2is.crt \
+  -keystore "$CARBON_HOME/repository/resources/security/client-truststore.jks" \
+  -storepass wso2carbon
+'
+
+docker restart apim
+```
+
+Verify paths if needed:
+
+```bash
+docker exec wso2is sh -lc 'echo $CARBON_HOME && ls "$CARBON_HOME/repository/resources/security"'
+docker exec apim sh -lc 'echo $CARBON_HOME && ls "$CARBON_HOME/repository/resources/security"'
+```
+
+Do not commit local cert/truststore material:
+
+```gitignore
+wso2is-km/
+*.jks
+*.p12
+*.pem
+*.key
+*.crt
+*.cer
+```
+
+---
+
+## 11. Publish the MI-backed Banking API in APIM
+
+This exposes WSO2 Micro Integrator through APIM.
+
+Open:
+
+```text
+https://localhost:9443/publisher
+```
+
+Create a REST API:
+
+```text
+Name:
+Banking MI API
+
+Context:
+bankingmi
+
+Version:
+1.0.0
+
+Endpoint:
+http://banking-mi:8290
+```
+
+Add resources for the banking paths you use from the UI:
+
+```text
+GET  /customers/1.0.0/profile/{customerId}
+GET  /accounts/1.0.0/balance/{accountId}
+GET  /cards/1.0.0/status/{cardId}
+POST /payments/1.0.0/pix/sync
+GET  /payments/1.0.0
+POST /transfers/1.0.0/ted/async
+GET  /transfers/1.0.0
+POST /compliance/1.0.0/audit
+POST /fraud/1.0.0/alerts
+```
+
+Configure security:
+
+```text
+Security:
+OAuth2
+
+Scopes:
+Map each resource to the corresponding Banking Demo API scope.
+```
+
+For a smooth UI demo, disable subscriptions/business plans on this user-facing API:
+
+```text
+Business Plans:
+Uncheck all plans for the MI API.
+```
+
+This avoids requiring a browser SPA to also manage an APIM application subscription. OAuth2 and scope validation remain active.
+
+Publish the API.
+
+Expected UI setting:
+
+```env
+VITE_APIM_BASE_URL=http://localhost:5173/gateway
+VITE_BANKING_MI_CONTEXT=/bankingmi/1.0.0
+```
+
+---
+
+## 12. Publish the Omni Agent API in APIM
+
+This is the user-facing AI API.
+
+Create an API in APIM Publisher:
+
+```text
+Name:
+Banking Agent
+
+Context:
+bankingagent
+
+Version:
+1.0.0
+
+Resource:
+POST /chat/completions
+
+Endpoint:
+http://banking-agent:8293/v1/ai/omni_a2a/chat/completions
+```
+
+Configure security:
+
+```text
+Security:
+OAuth2
+
+Required scope:
+agent:chat
+```
+
+For the user-facing Omni API, disable subscriptions/business plans:
+
+```text
+Business Plans:
+Uncheck all plans for the Banking Agent API.
+```
+
+Publish the API.
+
+Expected UI setting:
+
+```env
+VITE_AGENT_CONTRACT=ai-adapter
+VITE_AGENT_CHAT_URL=http://localhost:5173/gateway/bankingagent/1.0.0/chat/completions
+```
+
+---
+
+## 13. Publish Managed Sub-agent AI APIs in APIM
+
+These APIs are called by the Omni agent, not directly by the browser.
+
+Create one API for each adapter:
+
+| APIM API name | Context | Version | Resource | Backend endpoint |
+|---|---|---:|---|---|
+| Banking Retail AI Adapter | `bankingretailaiadapter` | `1.0.0` | `POST /chat/completions` | `http://banking-agent:8293/v1/ai/retail/chat/completions` |
+| Banking Payments AI Adapter | `bankingpaymentsaiadapter` | `1.0.0` | `POST /chat/completions` | `http://banking-agent:8293/v1/ai/payments/chat/completions` |
+| Banking Risk AI Adapter | `bankingriskaiadapter` | `1.0.0` | `POST /chat/completions` | `http://banking-agent:8293/v1/ai/risk/chat/completions` |
+| Banking Compliance AI Adapter | `bankingcomplianceaiadapter` | `1.0.0` | `POST /chat/completions` | `http://banking-agent:8293/v1/ai/compliance/chat/completions` |
+| Banking Knowledge AI Adapter | `bankingknowledgeaiadapter` | `1.0.0` | `POST /chat/completions` | `http://banking-agent:8293/v1/ai/knowledge/chat/completions` |
+
+Configure security for each sub-agent API:
+
+```text
+Security:
+API Key
+
+Business Plans:
+Keep Unlimited checked.
+```
+
+Important:
+
+- Do **not** disable subscriptions/business plans for API Key sub-agent APIs.
+- APIM API Key security needs an application subscription/tier. If you uncheck all business plans, APIM can show errors such as `The tier cannot be null`.
+- Subscribe the same APIM application to all sub-agent AI APIs.
+
+Recommended DevPortal flow:
+
+```text
+DevPortal → Applications → Default Application
+Subscribe Default Application to:
+  Banking Retail AI Adapter
+  Banking Payments AI Adapter
+  Banking Risk AI Adapter
+  Banking Compliance AI Adapter
+  Banking Knowledge AI Adapter
+Generate API Key
+Copy the generated key into AGENT_GATEWAY_ACCESS_TOKEN
+```
+
+The working header in this setup is:
+
+```text
+apikey: <generated API key>
+```
+
+Not:
+
+```text
+Internal-Key: <key>
+```
+
+---
+
+## 14. Rebuild After APIM Setup
+
+After changing `.env`, `docker-compose.yml`, or frontend build args:
 
 ```bash
 docker compose build banking-ui --no-cache
 docker compose up -d banking-ui
+docker compose up -d --force-recreate banking-agent
+```
+
+If you changed Ballerina source:
+
+```bash
+docker compose build banking-agent --no-cache
+docker compose up -d banking-agent
+```
+
+Check runtime env:
+
+```bash
+docker exec banking-agent sh -lc '
+env | grep -E "AGENT_GATEWAY|BAL_CONFIG_VAR_AGENT_GATEWAY|ENABLE_OBO|AGENT_ALLOWED" |
+sed -E "s/(ACCESS_TOKEN=).+/\1<hidden>/"
+'
 ```
 
 ---
 
-## 10. Banking UI Permission Model
+## 15. Smoke Tests
 
-The UI enforces two layers of behavior:
+Set variables:
 
-### 10.1 API card guard
+```bash
+export UI=http://localhost:5173
+export APIM=http://localhost:8280
+export AGENT=http://localhost:8293
+export MI=http://localhost:8290
+```
 
-Each API card requires a scope.
+### 15.1 Agent direct
 
-| UI action | Scope |
-|---|---|
-| Customer profile | `banking:profile:read` |
-| Account balance | `banking:accounts:read` |
-| Card status | `banking:cards:read` |
-| Create PIX payment | `banking:payments:create` |
-| Payment status | `banking:payments:read` |
-| Create TED transfer | `banking:transfers:create` |
-| Transfer status | `banking:transfers:read` |
-| Create audit event | `banking:compliance:write` |
-| Create fraud alert | `banking:fraud:write` |
-| Agent chat | `agent:chat` |
+```bash
+curl -i -X POST "$AGENT/v1/ai/retail/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "X-Correlation-Id: direct-retail-ai-001" \
+  -d '{
+    "model": "banking-retail-ai",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Explain customer CUST-BR-001, account ACC-CHK-BR-001, and card CARD-CR-BR-001."
+      }
+    ],
+    "metadata": {
+      "sessionId": "direct-retail-ai-001"
+    }
+  }'
+```
 
-### 10.2 Agent visibility guard
+### 15.2 Sub-agent through APIM from inside the APIM container
 
-The agent is not mounted in the page unless:
+Use the exact key the agent will use:
+
+```bash
+KEY="$(docker exec banking-agent sh -lc 'printf %s "$AGENT_GATEWAY_ACCESS_TOKEN"')"
+
+docker exec -e KEY="$KEY" apim sh -lc 'curl -i -X POST http://localhost:8280/bankingretailaiadapter/1.0.0/chat/completions \
+  -H "apikey: $KEY" \
+  -H "Content-Type: application/json" \
+  -d "{\"model\":\"banking-retail-ai\",\"messages\":[{\"role\":\"user\",\"content\":\"Explain customer CUST-BR-001, account ACC-CHK-BR-001, and card CARD-CR-BR-001.\"}],\"metadata\":{\"sessionId\":\"agent-api-key-test\"}}"'
+```
+
+Expected:
+
+```text
+HTTP/1.1 200 OK
+```
+
+If `Internal-Key` returns `401 invalid_token`, keep using `apikey`.
+
+### 15.3 UI to Omni through APIM
+
+Login to the UI as a user with `agent:chat`, then ask:
+
+```text
+Explain customer CUST-BR-001, account ACC-CHK-BR-001, and card CARD-CR-BR-001.
+```
+
+Expected logs:
+
+```text
+Banking omni A2A agent IN
+AGENT_HANDOFF_INTERCEPTED ... BankingRetailAgent ... BEFORE
+Banking AI-adapter OUT ... BankingRetailAgent ... httpStatus=200
+AGENT_HANDOFF_INTERCEPTED ... BankingRetailAgent ... AFTER ... SUCCESS
+```
+
+---
+
+## 16. Agent Test Prompts
+
+Use these exact prompts in the Omni agent chat.
+
+### Retail
+
+```text
+Explain customer CUST-BR-001, account ACC-CHK-BR-001, and card CARD-CR-BR-001.
+```
+
+Expected handoff:
+
+```text
+BankingOmniAgent → BankingRetailAgent
+```
+
+### Payments
+
+```text
+Check recent payments for account ACC-CHK-BR-001. Summarize any PIX payments and tell me whether anything needs attention. Do not create a new payment.
+```
+
+Expected handoff:
+
+```text
+BankingOmniAgent → BankingPaymentsAgent
+```
+
+### Risk / transfer review
+
+Use the seeded transfer ID, not the customer ID:
+
+```text
+Check transfer TRF-20260315-0001 and tell me whether it is under review, what risk signals apply, and whether it requires attention.
+```
+
+Expected handoff:
+
+```text
+BankingOmniAgent → BankingRiskAgent
+```
+
+### Compliance
+
+```text
+Review compliance and audit concerns related to transfer TRF-20260315-0001. Tell me whether anything should be escalated.
+```
+
+Expected handoff:
+
+```text
+BankingOmniAgent → BankingComplianceAgent
+```
+
+### Knowledge
+
+```text
+Explain the difference between PIX and TED in this banking demo, including when each one should be used and what risks or compliance checks may apply.
+```
+
+Expected handoff:
+
+```text
+BankingOmniAgent → BankingKnowledgeAgent
+```
+
+### Multi-agent review
+
+```text
+Run a full banking review for customer CUST-BR-001, account ACC-CHK-BR-001, card CARD-CR-BR-001, and transfer TRF-20260315-0001. Include customer profile, account status, card status, payment activity, transfer risk review, compliance concerns, and banking policy explanation. Route the request to every relevant specialist agent and summarize the result by domain.
+```
+
+Expected handoffs:
+
+```text
+BankingRetailAgent
+BankingPaymentsAgent
+BankingRiskAgent
+BankingComplianceAgent
+BankingKnowledgeAgent
+```
+
+---
+
+## 17. Demo OBO Behavior
+
+### Current local OBO behavior
+
+The UI no longer blocks sensitive agent prompts locally. It only checks:
 
 ```text
 User is authenticated
 AND
-Token contains agent:chat
+user token contains agent:chat
 ```
 
-### 10.3 Agent sensitive action guard
+The request reaches the server-side agent, where the demo can explain or pre-check an OBO decision.
 
-In direct-agent mode, the UI also blocks sensitive prompts before they reach the Ballerina agent.
+Current local pre-check rule:
+
+```text
+ALLOW only if:
+  user has required scope
+  AND
+  agent has required scope
+```
 
 Examples:
 
-| Prompt intent | Required scope |
-|---|---|
-| Create/submit/initiate/send/process PIX or payment | `banking:payments:create` |
-| Create/submit/initiate/send/process TED or transfer | `banking:transfers:create` |
-| Create/write/register/record audit or compliance event | `banking:compliance:write` |
-| Create/write/register/record fraud alert | `banking:fraud:write` |
+| User has `banking:payments:create` | Agent has `banking:payments:create` | Expected result |
+|---|---|---|
+| no | yes | deny |
+| yes | no | deny |
+| no | no | deny |
+| yes | yes | allow |
 
-This prevents a user like Ana from using the chat to bypass missing payment permissions.
-
-Production note: this frontend guard is for demo safety. In production, enforce the same policy at APIM and/or inside the agent/backend resource layer.
-
----
-
-## 11. Running the Demo
-
-### 11.1 Start everything
-
-```bash
-docker compose up -d
-docker compose ps
-```
-
-### 11.2 Open the UI
-
-```text
-http://localhost:5173
-```
-
-### 11.3 Positive and negative tests
-
-#### Ana positive test
+### Ana negative test
 
 Login:
 
@@ -1016,58 +1274,22 @@ Login:
 ana / Ana@12345
 ```
 
-Invoke:
+Ask:
 
 ```text
-Customer profile
-Customer ID: CUST-BR-001
+Create a PIX payment of 320 BRL from ACC-CHK-BR-001 to merchant@pix.example for Mercado Sao Bento. Explain the OBO authorization decision.
 ```
 
-Expected:
+Expected if Ana lacks `banking:payments:create`:
 
 ```text
-Success. Ana has banking:profile:read.
+OBO authorization denied.
+User delegated permission: missing.
+Banking Omni Agent permission: present.
+No PIX payment was executed.
 ```
 
-Ask agent:
-
-```text
-Summarize the current customer profile for CUST-BR-001 and highlight risk signals.
-```
-
-Expected:
-
-```text
-Allowed. Ana has agent:chat and retail read permissions.
-```
-
-#### Ana negative test
-
-Try UI action:
-
-```text
-Create PIX payment
-```
-
-Expected:
-
-```text
-Button is locked or disabled with Missing banking:payments:create.
-```
-
-Ask agent:
-
-```text
-Create a PIX payment of 320 BRL from ACC-CHK-BR-001 to merchant@pix.example.
-```
-
-Expected:
-
-```text
-Blocked by Identity policy: This agent request appears to ask the agent to create PIX payments, but the current user token is missing banking:payments:create.
-```
-
-#### Bruno positive test
+### Bruno positive test
 
 Login:
 
@@ -1075,128 +1297,29 @@ Login:
 bruno / Bruno@12345
 ```
 
-Invoke:
+Ask the same prompt.
+
+Expected if Bruno and the agent both have `banking:payments:create`:
 
 ```text
-Create PIX payment
+OBO authorization pre-check passed.
+Both the signed-in user and the Banking Omni Agent identity have banking:payments:create.
+PIX may proceed.
 ```
 
-Expected:
+### Production OBO note
 
-```text
-Allowed. Bruno has banking:payments:create.
-```
+For production-grade dynamic OBO, do not use static `AGENT_ALLOWED_SCOPES`. Instead:
 
-Ask agent:
-
-```text
-Create a PIX payment of 320 BRL from ACC-CHK-BR-001 to merchant@pix.example.
-```
-
-Expected:
-
-```text
-Allowed in the demo UI policy because Bruno has banking:payments:create.
-```
-
-#### Clara negative/positive mix
-
-Login:
-
-```text
-clara / Clara@12345
-```
-
-Expected:
-
-```text
-Agent is hidden because Clara does not have agent:chat.
-Payment and transfer actions are locked.
-Compliance and fraud actions are available.
-```
-
-Optional live demo:
-
-1. Add `BankingAgentUser` to Clara.
-2. Log out from the UI.
-3. Log in again as Clara.
-4. Show that the agent now appears.
+1. The agent authenticates to IS using Agent ID/Secret.
+2. The agent requests an OBO/delegated token for the required banking scope.
+3. IS decides based on the human user, the agent identity, consent/delegation, and assigned roles.
+4. The downstream APIM/MI call uses the delegated bearer token.
+5. APIM/resource server validates the delegated token and scope.
 
 ---
 
-## 12. Direct Smoke Tests
-
-Set variables:
-
-```bash
-export BACKEND=http://localhost:8080
-export MI=http://localhost:8290
-export AGENT=http://localhost:8293
-export UI=http://localhost:5173
-export APIM=http://localhost:8280
-export CID=test-corr-001
-```
-
-### 12.1 Backend
-
-```bash
-curl -i "$BACKEND/health"
-curl -i "$BACKEND/admin/snapshot"
-```
-
-### 12.2 MI direct
-
-```bash
-curl -i \
-  -H "X-Correlation-Id: mi-cust-001" \
-  "$MI/customers/1.0.0/profile/CUST-BR-001"
-
-curl -i \
-  -H "X-Correlation-Id: mi-acc-001" \
-  "$MI/accounts/1.0.0/balance/ACC-CHK-BR-001"
-
-curl -i \
-  -H "X-Correlation-Id: mi-card-001" \
-  "$MI/cards/1.0.0/status/CARD-CR-BR-001"
-```
-
-### 12.3 MI through UI proxy
-
-```bash
-curl -i "$UI/mi/customers/1.0.0/profile/CUST-BR-001"
-curl -i "$UI/mi/accounts/1.0.0/balance/ACC-CHK-BR-001"
-curl -i "$UI/mi/cards/1.0.0/status/CARD-CR-BR-001"
-```
-
-### 12.4 Agent direct
-
-```bash
-curl -i -X POST "$AGENT/v1/omni/chat" \
-  -H "Content-Type: application/json" \
-  -H "X-Correlation-Id: agent-direct-001" \
-  -d '{
-    "sessionId": "sess-agent-direct-001",
-    "message": "Show me customer CUST-BR-001 and account ACC-CHK-BR-001."
-  }'
-```
-
-### 12.5 Agent through UI proxy
-
-```bash
-curl -i -X POST "$UI/agent/v1/omni/chat" \
-  -H "Content-Type: application/json" \
-  -H "X-Agent-Id: test-agent" \
-  -H "X-Agent-Name: Banking Omni Assistant Agent" \
-  -H "X-Correlation-Id: agent-proxy-001" \
-  -d '{
-    "sessionId": "sess-agent-proxy-001",
-    "message": "Show me customer CUST-BR-001 and account ACC-CHK-BR-001."
-  }'
-```
-
----
-
-## 13. Mocked Backend Data
+## 18. Mocked Backend Data
 
 ### Customers
 
@@ -1224,289 +1347,142 @@ CARD-CR-BR-001
 Seeded PIX:
 PMT-PIX-20260315-0001
 
-Seeded TED:
+Seeded transfer under review:
+TRF-20260315-0001
+```
+
+Do not ask the transfer tools only by customer ID. The transfer status tool expects a transfer ID such as:
+
+```text
 TRF-20260315-0001
 ```
 
 ---
 
-## 14. Agentic Layer Endpoints
+## 19. Troubleshooting
 
-### Business chat endpoints
+### 19.1 UI works with IS login, but APIM returns subscription errors
 
-```text
-POST /v1/retail/chat
-POST /v1/payments/chat
-POST /v1/risk/chat
-POST /v1/compliance/chat
-POST /v1/knowledge/chat
-POST /v1/omni/chat
-POST /v1/omni_a2a/chat
-```
-
-Direct Ballerina request shape:
-
-```json
-{
-  "sessionId": "sess-001",
-  "message": "Show me customer CUST-BR-001."
-}
-```
-
-### RAG endpoints
+Symptom:
 
 ```text
-GET  /v1/rag/documents
-POST /v1/rag/search
-POST /v1/rag/documents
-POST /v1/rag/reset
+900908 Resource forbidden
+API Subscription validation failed
+User is not subscribed to access the API
 ```
 
-### AI adapter endpoints
+For user-facing APIs such as the MI API and the Omni agent API, uncheck all business plans/subscriptions for the local demo.
+
+For sub-agent API Key APIs, keep `Unlimited` checked and subscribe the APIM application.
+
+### 19.2 Sub-agent API key returns 401
+
+Symptom:
 
 ```text
-POST /v1/ai/retail/chat/completions
-POST /v1/ai/payments/chat/completions
-POST /v1/ai/risk/chat/completions
-POST /v1/ai/compliance/chat/completions
-POST /v1/ai/knowledge/chat/completions
-POST /v1/ai/omni_a2a/chat/completions
-```
-
-OpenAI-compatible request shape:
-
-```json
-{
-  "model": "banking-retail-ai",
-  "messages": [
-    {
-      "role": "user",
-      "content": "Explain customer CUST-BR-001."
-    }
-  ]
-}
-```
-
----
-
-## 15. Optional APIM Mode
-
-The local UI currently bypasses APIM because no APIs need to be published for the Identity Server-focused demo.
-
-To switch the UI to APIM mode later:
-
-1. Publish the MI-backed APIs in APIM.
-2. Publish the AI adapter endpoints as APIM AI APIs.
-3. Configure API scopes in APIM.
-4. Configure token validation/key manager as needed.
-5. Change root `.env`.
-
-Example APIM mode:
-
-```env
-VITE_APIM_BASE_URL=http://localhost:5173/gateway
-VITE_AGENT_CONTRACT=ai-adapter
-VITE_AGENT_CHAT_URL=http://localhost:5173/gateway/v1/ai/omni_a2a/chat/completions
-```
-
-Then update `banking-demo-ui/nginx.conf` to include:
-
-```nginx
-location /gateway/ {
-    proxy_pass http://apim:8280/;
-    proxy_http_version 1.1;
-
-    proxy_set_header Host $host;
-    proxy_set_header Authorization $http_authorization;
-    proxy_set_header X-Correlation-Id $http_x_correlation_id;
-    proxy_set_header x-fapi-interaction-id $http_x_fapi_interaction_id;
-
-    proxy_buffering off;
-    proxy_read_timeout 300s;
-    proxy_connect_timeout 60s;
-}
-```
-
-Rebuild:
-
-```bash
-docker compose build banking-ui --no-cache
-docker compose up -d banking-ui
-```
-
----
-
-## 16. APIM AI API Examples
-
-If APIM APIs are published, example gateway paths may look like:
-
-```text
-/bankingretailaiadapter/1.0.0/chat/completions
-/bankingpaymentsaiadapter/1.0.0/chat/completions
-/bankingriskaiadapter/1.0.0/chat/completions
-/bankingcomplianceaiadapter/1.0.0/chat/completions
-/bankingknowledgeaiadapter/1.0.0/chat/completions
-/bankingomnia2aaiadapter/1.0.0/chat/completions
-```
-
-Example:
-
-```bash
-curl -i -X POST "$APIM/bankingretailaiadapter/1.0.0/chat/completions" \
-  -H "ApiKey: $APIKEY" \
-  -H "Content-Type: application/json" \
-  -H "X-Session-Id: apim-retail-ai-001" \
-  -d '{
-    "model":"banking-retail-ai",
-    "messages":[
-      {
-        "role":"user",
-        "content":"Explain customer CUST-BR-001, account ACC-CHK-BR-001, and card CARD-CR-BR-001."
-      }
-    ]
-  }'
-```
-
----
-
-## 17. Troubleshooting
-
-### 17.1 `https://localhost:9444/console` shows API Manager error
-
-Problem:
-
-```text
-Cannot find an application associated with the given consumer key.
-```
-
-Cause:
-
-```text
-Identity Server was exposed as host 9444 but still running internally as 9443, causing redirect confusion with APIM.
-```
-
-Fix:
-
-Use `-DportOffset=1` and map:
-
-```yaml
-ports:
-  - "9444:9444"
-```
-
-Then reset the old IS volume if needed:
-
-```bash
-docker compose down
-docker volume ls | grep is_home
-docker volume rm <your_is_volume_name>
-docker compose up -d wso2is
-```
-
-### 17.2 Docker says `COPY nginx.conf` failed
-
-Cause:
-
-```text
-banking-demo-ui/.dockerignore excluded nginx.conf.
-```
-
-Fix:
-
-```bash
-cat > banking-demo-ui/.dockerignore <<'EOF'
-node_modules
-dist
-.env
-npm-debug.log
-EOF
-```
-
-Then:
-
-```bash
-docker compose build banking-ui --no-cache
-```
-
-### 17.3 APIM logs `Invalid URL` for `/customers/...`
-
-Cause:
-
-```text
-The UI is pointing to APIM but those APIs are not published in APIM.
-```
-
-Fix for direct mode:
-
-```env
-VITE_APIM_BASE_URL=http://localhost:5173/mi
-VITE_AGENT_CONTRACT=banking-agent
-VITE_AGENT_CHAT_URL=http://localhost:5173/agent/v1/omni/chat
-```
-
-Rebuild UI:
-
-```bash
-docker compose build banking-ui --no-cache
-docker compose up -d banking-ui
-```
-
-### 17.4 Agent returns `data binding failed: undefined field 'context'`
-
-Cause:
-
-```text
-The direct Ballerina /v1/omni/chat endpoint rejects unknown JSON fields.
+401 invalid_token
 ```
 
 Fix:
 
 Use:
 
+```text
+apikey: <generated API key>
+```
+
+Do not use:
+
+```text
+Internal-Key: <generated API key>
+```
+
+Set:
+
 ```env
-VITE_AGENT_CONTRACT=banking-agent
+AGENT_GATEWAY_ACCESS_TOKEN=<generated APIM API key>
 ```
 
-The UI must send:
+and:
 
-```json
-{
-  "sessionId": "...",
-  "message": "..."
-}
+```yaml
+- BAL_CONFIG_VAR_AGENT_GATEWAY_AUTH_MODE=api_key
+- BAL_CONFIG_VAR_AGENT_GATEWAY_API_KEY_HEADER=apikey
+- BAL_CONFIG_VAR_AGENT_GATEWAY_ACCESS_TOKEN=${AGENT_GATEWAY_ACCESS_TOKEN:-}
 ```
 
-not:
+Recreate:
 
-```json
-{
-  "sessionId": "...",
-  "message": "...",
-  "context": {}
-}
+```bash
+docker compose up -d --force-recreate banking-agent
 ```
 
-### 17.5 Ana can create PIX through the agent
+### 19.3 Omni returns 500, but sub-agent direct APIM call works
 
-Cause:
+Test the exact same prompt directly against the sub-agent APIM API. If direct call returns `200`, the issue is usually timeout/session/orchestration, not APIM auth.
+
+Useful check:
+
+```bash
+docker compose logs --tail=300 banking-agent | egrep -i \
+'Banking AI-adapter IN|Banking AI-adapter OUT|Banking AI-adapter execution failed|agent_execution_failed|timeout|error|agent-ui'
+```
+
+### 19.4 Ballerina config did not change
+
+Ballerina `configurable` values are safest when passed as:
 
 ```text
-The agent chat path was not applying the same write-scope policy as the UI API cards.
+BAL_CONFIG_VAR_<CONFIG_NAME>
 ```
 
-Fix:
-
-Ensure `main.js` contains `SENSITIVE_AGENT_POLICIES` and calls `enforceAgentPromptPolicy(message)` before `callAgent(message)`.
-
-Expected Ana result:
+For example:
 
 ```text
-Blocked by Identity policy: This agent request appears to ask the agent to create PIX payments, but the current user token is missing banking:payments:create.
+BAL_CONFIG_VAR_AGENT_GATEWAY_API_KEY_HEADER=apikey
 ```
 
-### 17.6 Docker Compose panics with `monitor.go`
+Do not rely only on plain environment variables for Ballerina `configurable` values.
 
-This is a Docker Compose CLI issue in some versions.
+### 19.5 APIM Key Manager HTTPS fails certificate validation
+
+Use internal HTTP endpoints for local Docker, or import the IS certificate into APIM's client truststore as shown in section 10.1.
+
+### 19.6 Browser Basic Auth popup after changing client ID
+
+Do not use an APIM confidential application consumer key as the browser SPA client ID.
+
+Use the WSO2 IS SPA application client ID:
+
+```env
+VITE_IS_CLIENT_ID=<IS SPA client ID>
+```
+
+The SPA token flow must not require a client secret in the browser.
+
+### 19.7 Agent says a customer ID is required as transfer ID
+
+If the prompt says:
+
+```text
+Check transfers for customer CUST-BR-001
+```
+
+the risk/transfer tool may try:
+
+```text
+/transfers/1.0.0?transferId=CUST-BR-001
+```
+
+which returns `404`.
+
+Use:
+
+```text
+Check transfer TRF-20260315-0001 and tell me whether it is under review.
+```
+
+### 19.8 Docker Compose panics with `monitor.go`
 
 Workaround:
 
@@ -1521,38 +1497,9 @@ instead of:
 docker compose up
 ```
 
-### 17.7 `Config.toml` mount error
-
-Error:
-
-```text
-not a directory: Are you trying to mount a directory onto a file?
-```
-
-Check:
-
-```bash
-file banking_agent_bi/Config.toml
-```
-
-Expected:
-
-```text
-ASCII text
-```
-
-Prefer one mount:
-
-```yaml
-volumes:
-  - ./banking_agent_bi/Config.toml:/workspace/Config.toml:ro
-```
-
-Or remove the volume if the Dockerfile already copies the config.
-
 ---
 
-## 18. Useful Logs
+## 20. Logs
 
 ```bash
 docker compose logs -f banking-ui
@@ -1564,14 +1511,21 @@ docker compose logs -f apim
 docker compose logs -f banking-webhook-listener
 ```
 
+Useful APIM/agent trace:
+
+```bash
+docker compose logs -f apim banking-agent banking-webhook-listener | egrep -i \
+'agent-ui|Banking omni|AGENT_HANDOFF|Banking AI-adapter|APIAuthenticationHandler|GatewayUtils|OBO'
+```
+
 ---
 
-## 19. Demo Talk Track
+## 21. Demo Talk Track
 
 ### Opening
 
 ```text
-This demo shows how WSO2 Identity Server controls who the user is and what they can do, WSO2 Micro Integrator mediates banking APIs, and the banking agent is governed as a separate identity. The user cannot use the agent to bypass missing permissions.
+This demo shows how WSO2 Identity Server controls who the user is and what they can do, WSO2 API Manager governs REST and AI APIs, WSO2 Micro Integrator mediates banking systems, and the banking agent is exposed and governed through APIM.
 ```
 
 ### Ana
@@ -1584,15 +1538,15 @@ Show:
 
 ```text
 Customer profile works.
-Create PIX is locked.
-Agent is visible.
-Agent PIX creation request is blocked by identity policy.
+Create PIX direct API card is locked.
+Agent is visible because Ana has agent:chat.
+Agent PIX creation request should be denied by the OBO policy if Ana lacks the payment-create scope.
 ```
 
 ### Bruno
 
 ```text
-Bruno is a payments operator. Same UI, different roles and scopes. Payment and transfer capabilities are now available.
+Bruno is a payments operator. Same UI, different token scopes. Payment and transfer capabilities are available.
 ```
 
 Show:
@@ -1600,58 +1554,107 @@ Show:
 ```text
 Create PIX works.
 Create TED works.
-Compliance/fraud remain unavailable.
+Agent-mediated PIX passes only when both Bruno and the agent are allowed.
 ```
 
 ### Clara
 
 ```text
-Clara is a compliance analyst. She can write compliance/fraud events, but she cannot create payments. She also cannot see the agent until agent:chat is granted.
-```
-
-Show:
-
-```text
-Agent hidden.
-Payment locked.
-Compliance/fraud available.
+Clara is a compliance analyst. She can write compliance/fraud events, but she cannot create payments. She does not see the agent unless agent:chat is granted.
 ```
 
 ### Agent identity
 
 ```text
-The agent is not just a UI widget. It is registered in WSO2 Identity Server as an AI agent with Agent ID, Agent Secret, OAuth Client ID, and its own roles. The browser never receives the agent secret.
+The agent is registered in WSO2 Identity Server as an AI agent with Agent ID, Agent Secret, OAuth Client ID, and its own roles. The browser never receives the agent secret.
 ```
 
-### Production note
+### APIM governance
 
 ```text
-This local demo enforces user permissions in the UI and agent prompt guard while calling MI and the agent directly. In production, the same policies should be enforced at APIM and resource-server layers, with IS-issued tokens validated at the gateway/backend.
+The top-level Omni agent API is exposed through APIM and requires agent:chat. The Omni agent then calls managed sub-agent AI APIs through APIM using a server-side API key, so browser users never see sub-agent credentials.
 ```
 
 ---
 
-## 20. Security Notes
+## 22. Security and Git Notes
 
-- The browser must never receive the agent secret.
-- `VITE_*` variables are public in the browser bundle.
-- Use least privilege for both users and agents.
-- Keep the agent read-only by default.
-- Sensitive operations should require human user permissions.
-- In production, never rely only on frontend guards.
-- Enforce scopes at APIM and/or backend/resource server.
-- Use correlation IDs for auditability.
-- Keep APIM as the recommended governance boundary for AI APIs and A2A flows.
+Do not commit:
+
+```text
+.env
+wso2is-km/
+*.jks
+*.p12
+*.pem
+*.key
+*.crt
+*.cer
+certs/
+keystores/
+truststores/
+node_modules/
+target/
+dist/
+```
+
+Recommended `.gitignore` additions:
+
+```gitignore
+.env
+wso2is-km/
+*.jks
+*.p12
+*.pem
+*.key
+*.crt
+*.cer
+certs/
+keystores/
+truststores/
+**/target/
+node_modules/
+dist/
+```
+
+Before committing:
+
+```bash
+git status --short
+git diff --cached --stat
+git diff --cached | grep -Ei 'BEGIN .*PRIVATE KEY|BEGIN CERTIFICATE|password|secret|token|apikey|api_key|OPENAI|AGENT_GATEWAY_ACCESS_TOKEN|client_secret'
+```
+
+It is okay if staged content contains variable names such as:
+
+```text
+AGENT_GATEWAY_ACCESS_TOKEN=${AGENT_GATEWAY_ACCESS_TOKEN:-}
+```
+
+It is not okay if staged content contains real token or secret values.
+
+Commit source changes selectively:
+
+```bash
+git add banking-demo-ui/nginx.conf
+git add banking-demo-ui/src/main.js
+git add banking_agent_bi/ai_adapter.bal
+git add banking_agent_bi/config.bal
+git add .gitignore
+git add -p docker-compose.yml
+git commit -m "Add APIM-routed banking agent OBO demo flow"
+```
 
 ---
 
-## 21. Quick Demo Checklist
+## 23. Quick Demo Checklist
 
 Before presenting:
 
 ```bash
 docker compose down
 docker compose build banking-ui --no-cache
+docker compose build banking-agent --no-cache
 docker compose up -d
 docker compose ps
 ```
@@ -1662,22 +1665,28 @@ Open:
 http://localhost:5173
 https://localhost:9444/console
 https://localhost:9443/publisher
+https://localhost:9443/devportal
+https://localhost:9443/admin
 ```
 
 Verify:
 
 ```bash
 curl -i http://localhost:5173
-curl -i http://localhost:5173/mi/customers/1.0.0/profile/CUST-BR-001
-curl -i -X POST http://localhost:5173/agent/v1/omni/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sessionId": "sess-smoke",
-    "message": "Show me customer CUST-BR-001."
-  }'
 ```
 
-Then test the users:
+Verify sub-agent APIM API key:
+
+```bash
+KEY="$(docker exec banking-agent sh -lc 'printf %s "$AGENT_GATEWAY_ACCESS_TOKEN"')"
+
+docker exec -e KEY="$KEY" apim sh -lc 'curl -i -X POST http://localhost:8280/bankingretailaiadapter/1.0.0/chat/completions \
+  -H "apikey: $KEY" \
+  -H "Content-Type: application/json" \
+  -d "{\"model\":\"banking-retail-ai\",\"messages\":[{\"role\":\"user\",\"content\":\"Explain customer CUST-BR-001.\"}],\"metadata\":{\"sessionId\":\"quick-demo-check\"}}"'
+```
+
+Test users:
 
 ```text
 ana / Ana@12345
@@ -1686,10 +1695,12 @@ clara / Clara@12345
 bankadmin / Admin@12345
 ```
 
-The most important proof point:
+Most important proof points:
 
 ```text
-Ana can chat, but cannot ask the agent to execute PIX.
-Bruno can execute PIX because he has the payment scope.
-Clara can do compliance/fraud work, but does not see the agent unless agent:chat is granted.
+1. Ana can chat, but cannot create PIX unless she has the required payment scope.
+2. Bruno can create PIX if both Bruno and the agent are allowed.
+3. Clara can do compliance/fraud work but does not see the agent unless agent:chat is granted.
+4. APIM routes both the user-facing Omni API and the managed sub-agent AI APIs.
+5. Sub-agent API credentials remain server-side.
 ```
