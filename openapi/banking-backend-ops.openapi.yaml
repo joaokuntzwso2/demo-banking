@@ -1,0 +1,87 @@
+openapi: 3.0.3
+info:
+  title: Banking Backend Operations API
+  version: 1.0.0
+  description: Direct backend contract for processor event operations.
+servers:
+  - url: http://banking-backend:8080
+paths:
+  /ops/processor-events:
+    post:
+      operationId: createProcessorEvent
+      summary: Receive processor event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessorEventInput'
+      responses:
+        '202':
+          description: Processor event received
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessorEventAck'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      operationId: listProcessorEvents
+      summary: List latest processor events
+      responses:
+        '200':
+          description: Latest processor events returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProcessorEvent'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    ProcessorEventInput:
+      type: object
+      additionalProperties: true
+      properties:
+        eventType:
+          type: string
+        operation:
+          type: string
+        correlationId:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+    ProcessorEvent:
+      allOf:
+        - $ref: '#/components/schemas/ProcessorEventInput'
+        - type: object
+          properties:
+            receivedAt:
+              type: string
+              format: date-time
+    ProcessorEventAck:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - RECEIVED
+        count:
+          type: integer
+          format: int32
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string

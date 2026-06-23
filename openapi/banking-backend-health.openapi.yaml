@@ -1,0 +1,45 @@
+openapi: 3.0.3
+info:
+  title: Banking Backend Health API
+  version: 1.0.0
+  description: Direct backend contract for the banking demo health endpoint.
+servers:
+  - url: http://banking-backend:8080
+paths:
+  /health:
+    get:
+      operationId: getBankingBackendHealth
+      summary: Get backend health
+      responses:
+        '200':
+          description: Backend health returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - UP
+        component:
+          type: string
+          enum:
+            - Banking-Backend-BR
+        correlationId:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string

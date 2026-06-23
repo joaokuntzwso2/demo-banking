@@ -1,0 +1,90 @@
+openapi: 3.0.3
+info:
+  title: Banking Backend Admin API
+  version: 1.0.0
+  description: Direct backend contract for administrative in-memory state operations.
+servers:
+  - url: http://banking-backend:8080
+paths:
+  /admin/reset:
+    post:
+      operationId: resetBankingBackendState
+      summary: Reset in-memory backend state
+      responses:
+        '200':
+          description: Backend state reset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetResponse'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /admin/snapshot:
+    get:
+      operationId: getBankingBackendSnapshot
+      summary: Get in-memory backend snapshot summary
+      responses:
+        '200':
+          description: Snapshot summary returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapshotResponse'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    SummarySnapshot:
+      type: object
+      properties:
+        customers:
+          type: integer
+          format: int32
+        accounts:
+          type: integer
+          format: int32
+        cards:
+          type: integer
+          format: int32
+        payments:
+          type: integer
+          format: int32
+        transfers:
+          type: integer
+          format: int32
+        complianceEvents:
+          type: integer
+          format: int32
+        fraudAlerts:
+          type: integer
+          format: int32
+        processorEvents:
+          type: integer
+          format: int32
+    ResetResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - RESET
+        snapshot:
+          $ref: '#/components/schemas/SummarySnapshot'
+    SnapshotResponse:
+      type: object
+      properties:
+        snapshot:
+          $ref: '#/components/schemas/SummarySnapshot'
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string

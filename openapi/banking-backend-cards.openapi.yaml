@@ -1,0 +1,82 @@
+openapi: 3.0.3
+info:
+  title: Banking Backend Cards API
+  version: 1.0.0
+  description: Direct backend contract for card status operations.
+servers:
+  - url: http://banking-backend:8080
+paths:
+  /cards/{cardId}/status:
+    get:
+      operationId: getCardStatus
+      summary: Get card status
+      parameters:
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Card status returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardStatus'
+        '404':
+          description: Card not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    CardStatus:
+      type: object
+      properties:
+        cardId:
+          type: string
+        customerId:
+          type: string
+        cardType:
+          type: string
+          enum:
+            - CREDIT
+            - DEBIT
+        network:
+          type: string
+          enum:
+            - VISA
+            - MASTERCARD
+            - ELO
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - TEMP_BLOCKED
+        limit:
+          type: number
+          format: double
+        availableLimit:
+          type: number
+          format: double
+        embossedName:
+          type: string
+        last4:
+          type: string
+        internationalEnabled:
+          type: boolean
+        lastUpdatedAt:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string

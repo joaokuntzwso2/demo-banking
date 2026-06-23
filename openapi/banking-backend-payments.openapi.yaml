@@ -1,0 +1,153 @@
+openapi: 3.0.3
+info:
+  title: Banking Backend Payments API
+  version: 1.0.0
+  description: Direct backend contract for PIX payment operations.
+servers:
+  - url: http://banking-backend:8080
+paths:
+  /payments/pix:
+    post:
+      operationId: createPixPayment
+      summary: Submit PIX payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PixPaymentRequest'
+      responses:
+        '201':
+          description: PIX payment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PixPayment'
+        '400':
+          description: Validation or business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Payment forbidden by account state or PIX limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /payments/{paymentId}:
+    get:
+      operationId: getPaymentById
+      summary: Get payment by id
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PixPayment'
+        '404':
+          description: Payment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /payments:
+    get:
+      operationId: listPayments
+      summary: List latest payments
+      responses:
+        '200':
+          description: Latest payments returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PixPayment'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    PixPaymentRequest:
+      type: object
+      required:
+        - accountId
+        - beneficiaryName
+        - beneficiaryBank
+        - amountBr
+      properties:
+        accountId:
+          type: string
+        beneficiaryName:
+          type: string
+        beneficiaryBank:
+          type: string
+        amountBr:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+    PixPayment:
+      type: object
+      properties:
+        paymentId:
+          type: string
+        accountId:
+          type: string
+        paymentRail:
+          type: string
+          enum:
+            - PIX
+        beneficiaryName:
+          type: string
+        beneficiaryBank:
+          type: string
+        amountBr:
+          type: number
+          format: double
+        status:
+          type: string
+          enum:
+            - PROCESSING
+            - PENDING_REVIEW
+            - SETTLED
+        createdAt:
+          type: string
+          format: date-time
+        lastUpdatedAt:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string

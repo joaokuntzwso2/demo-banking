@@ -278,7 +278,7 @@ function render() {
 
       <section class="hero-grid">
         <div>
-          <p class="eyebrow">Principal Solutions Architect demo path</p>
+          <p class="eyebrow">Demo Path</p>
           <h1>Identity-gated APIs and On-Behalf-Of banking agent authorization</h1>
           <p class="lede">
             Direct API cards remain guarded by the signed-in user's token scopes.

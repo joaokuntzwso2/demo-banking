@@ -1,0 +1,154 @@
+openapi: 3.0.3
+info:
+  title: Banking Backend Transfers API
+  version: 1.0.0
+  description: Direct backend contract for TED transfer operations.
+servers:
+  - url: http://banking-backend:8080
+paths:
+  /transfers/ted:
+    post:
+      operationId: createTedTransfer
+      summary: Submit TED transfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TedTransferRequest'
+      responses:
+        '201':
+          description: TED transfer created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TedTransfer'
+        '400':
+          description: Validation or business error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Transfer forbidden by account state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Origin account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /transfers/{transferId}:
+    get:
+      operationId: getTransferById
+      summary: Get transfer by id
+      parameters:
+        - name: transferId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transfer returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TedTransfer'
+        '404':
+          description: Transfer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /transfers:
+    get:
+      operationId: listTransfers
+      summary: List latest transfers
+      responses:
+        '200':
+          description: Latest transfers returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TedTransfer'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    TedTransferRequest:
+      type: object
+      required:
+        - fromAccountId
+        - toBankCode
+        - toAccountMasked
+        - amountBr
+        - channel
+      properties:
+        fromAccountId:
+          type: string
+        toBankCode:
+          type: string
+        toAccountMasked:
+          type: string
+        amountBr:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+        channel:
+          type: string
+    TedTransfer:
+      type: object
+      properties:
+        transferId:
+          type: string
+        fromAccountId:
+          type: string
+        toBankCode:
+          type: string
+        toAccountMasked:
+          type: string
+        amountBr:
+          type: number
+          format: double
+        channel:
+          type: string
+        status:
+          type: string
+          enum:
+            - PROCESSING
+            - PENDING_REVIEW
+            - SETTLED
+        createdAt:
+          type: string
+          format: date-time
+        lastUpdatedAt:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string

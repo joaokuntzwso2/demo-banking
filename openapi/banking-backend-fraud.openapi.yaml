@@ -1,0 +1,82 @@
+openapi: 3.0.3
+info:
+  title: Banking Backend Fraud API
+  version: 1.0.0
+  description: Direct backend contract for fraud alert operations.
+servers:
+  - url: http://banking-backend:8080
+paths:
+  /fraud/alerts:
+    post:
+      operationId: createFraudAlert
+      summary: Create fraud alert
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FraudAlertInput'
+      responses:
+        '201':
+          description: Fraud alert created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FraudAlert'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      operationId: listFraudAlerts
+      summary: List latest fraud alerts
+      responses:
+        '200':
+          description: Latest fraud alerts returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FraudAlert'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    FraudAlertInput:
+      type: object
+      additionalProperties: true
+      properties:
+        alertType:
+          type: string
+        riskLevel:
+          type: string
+        accountId:
+          type: string
+          nullable: true
+        cardId:
+          type: string
+          nullable: true
+        details:
+          type: string
+    FraudAlert:
+      allOf:
+        - $ref: '#/components/schemas/FraudAlertInput'
+        - type: object
+          properties:
+            alertId:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string

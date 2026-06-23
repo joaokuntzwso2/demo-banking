@@ -1,0 +1,74 @@
+openapi: 3.0.3
+info:
+  title: Banking Backend Accounts API
+  version: 1.0.0
+  description: Direct backend contract for account balance operations.
+servers:
+  - url: http://banking-backend:8080
+paths:
+  /accounts/{accountId}/balance:
+    get:
+      operationId: getAccountBalance
+      summary: Get account balance
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Account balance returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountBalance'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    AccountBalance:
+      type: object
+      properties:
+        accountId:
+          type: string
+        accountType:
+          type: string
+          enum:
+            - CHECKING
+            - SAVINGS
+        currency:
+          type: string
+          enum:
+            - BRL
+        availableBalance:
+          type: number
+          format: double
+        ledgerBalance:
+          type: number
+          format: double
+        status:
+          type: string
+          enum:
+            - ACTIVE
+        dailyPixLimit:
+          type: number
+          format: double
+        lastUpdatedAt:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string

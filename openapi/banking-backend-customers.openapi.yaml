@@ -1,0 +1,144 @@
+openapi: 3.0.3
+info:
+  title: Banking Backend Customers API
+  version: 1.0.0
+  description: Direct backend contract for customer profile lookup operations.
+servers:
+  - url: http://banking-backend:8080
+paths:
+  /customers/profile/{customerId}:
+    get:
+      operationId: getCustomerProfile
+      summary: Get customer profile
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Customer profile lookup returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerProfileResponse'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    CustomerProfileResponse:
+      type: object
+      properties:
+        exists:
+          type: boolean
+        customerId:
+          type: string
+        cpf:
+          type: string
+        name:
+          type: string
+        kycStatus:
+          type: string
+          enum:
+            - VERIFIED
+            - PENDING_REVIEW
+        riskRating:
+          type: string
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+        preferredBranchId:
+          type: string
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Account'
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardStatus'
+        message:
+          type: string
+    Account:
+      type: object
+      properties:
+        accountId:
+          type: string
+        customerId:
+          type: string
+        accountType:
+          type: string
+          enum:
+            - CHECKING
+            - SAVINGS
+        currency:
+          type: string
+          enum:
+            - BRL
+        availableBalance:
+          type: number
+          format: double
+        ledgerBalance:
+          type: number
+          format: double
+        status:
+          type: string
+          enum:
+            - ACTIVE
+        dailyPixLimit:
+          type: number
+          format: double
+        branchId:
+          type: string
+        lastUpdatedAt:
+          type: string
+          format: date-time
+    CardStatus:
+      type: object
+      properties:
+        cardId:
+          type: string
+        customerId:
+          type: string
+        cardType:
+          type: string
+          enum:
+            - CREDIT
+            - DEBIT
+        network:
+          type: string
+          enum:
+            - VISA
+            - MASTERCARD
+            - ELO
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - TEMP_BLOCKED
+        limit:
+          type: number
+          format: double
+        availableLimit:
+          type: number
+          format: double
+        embossedName:
+          type: string
+        last4:
+          type: string
+        internationalEnabled:
+          type: boolean
+        lastUpdatedAt:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string

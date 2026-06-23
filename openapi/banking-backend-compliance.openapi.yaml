@@ -1,0 +1,80 @@
+openapi: 3.0.3
+info:
+  title: Banking Backend Compliance API
+  version: 1.0.0
+  description: Direct backend contract for compliance audit operations.
+servers:
+  - url: http://banking-backend:8080
+paths:
+  /compliance/audit:
+    post:
+      operationId: createComplianceAuditEvent
+      summary: Create compliance audit event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComplianceAuditEventInput'
+      responses:
+        '201':
+          description: Compliance audit event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceAuditEvent'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      operationId: listComplianceAuditEvents
+      summary: List latest compliance audit events
+      responses:
+        '200':
+          description: Latest compliance audit events returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ComplianceAuditEvent'
+        '500':
+          description: Backend error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    ComplianceAuditEventInput:
+      type: object
+      additionalProperties: true
+      properties:
+        eventType:
+          type: string
+        severity:
+          type: string
+        customerId:
+          type: string
+        accountId:
+          type: string
+        details:
+          type: string
+    ComplianceAuditEvent:
+      allOf:
+        - $ref: '#/components/schemas/ComplianceAuditEventInput'
+        - type: object
+          properties:
+            complianceId:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
